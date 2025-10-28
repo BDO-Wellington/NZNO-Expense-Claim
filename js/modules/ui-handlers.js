@@ -34,6 +34,11 @@ export function addOtherExpenseRow() {
   const newRow = document.createElement('tr');
   newRow.innerHTML = '<td><input type="text" class="form-control" name="other_description[]"></td><td><input type="number" class="form-control" name="other_amount[]" step="0.01"></td><td><input type="file" class="form-control-file" name="other_attachment[]" multiple></td><td><button type="button" class="btn btn-danger btn-sm" data-action="remove-row">Remove</button></td>';
   tableBody.appendChild(newRow);
+  // Disable scroll wheel on the newly added number input
+  const numberInput = newRow.querySelector('input[type="number"]');
+  if (numberInput) {
+    disableScrollOnInput(numberInput);
+  }
 }
 
 /**
@@ -189,6 +194,29 @@ export function hidePdfButton() {
 }
 
 /**
+ * Disables scroll wheel on a specific number input to prevent accidental changes.
+ * @param {HTMLInputElement} input - The number input element
+ * @returns {void}
+ */
+export function disableScrollOnInput(input) {
+  if (input && input.type === 'number') {
+    input.addEventListener('wheel', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+  }
+}
+
+/**
+ * Disables scroll wheel on all number inputs in the form.
+ * @returns {void}
+ */
+export function disableScrollOnNumberInputs() {
+  document.querySelectorAll('input[type="number"]').forEach(input => {
+    disableScrollOnInput(input);
+  });
+}
+
+/**
  * Sets up all event listeners for the application.
  * @param {object} handlers - Object containing event handler functions
  * @returns {void}
@@ -223,6 +251,8 @@ export function setupEventListeners(handlers) {
     const pdfBtn = document.getElementById('downloadPdfButton');
     if (pdfBtn) { pdfBtn.addEventListener('click', handlers.onPdfDownload); }
   }
+  // Disable scroll wheel on all number inputs
+  disableScrollOnNumberInputs();
 }
 
 /**
@@ -235,6 +265,7 @@ export function initializeUI(config) {
   setDefaultDate();
   renderAttachmentFilenames();
   generateExpenseTable(EXPENSE_TYPES);
+  disableScrollOnNumberInputs();
   if (config && config.DEBUG_MODE && config.DEBUG_MODE.toUpperCase() === 'DEBUG') {
     hidePdfButton();
   }

@@ -32,8 +32,57 @@
     display: inline !important;
 }
 
+/* Only apply page break to explicit page-break divs */
 .print-friendly .page-break {
-    page-break-after: always;
+    page-break-before: always !important;
+    break-before: always !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* Prevent page breaks after headings */
+.print-friendly h2,
+.print-friendly h4 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    margin-top: 0 !important;
+}
+
+/* Prevent page break after main title specifically */
+.print-friendly>h2:first-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+}
+
+/* Wrapper to keep title with content */
+.print-friendly .no-page-break {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+}
+
+/* Keep form sections together when possible */
+.print-friendly .form-section,
+.print-friendly .details-row,
+.print-friendly #expenseForm>h4 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+}
+
+/* Remove margins that might cause breaks */
+.print-friendly.container,
+.print-friendly .container {
+    margin-top: 0 !important;
+    padding-top: 0.5rem !important;
 }
 
 /* Improved table cell padding for better margins */
@@ -48,12 +97,12 @@
     body:not(.print-friendly) {
         display: none;
     }
-    
+
     .print-friendly {
         background: #fff !important;
         color: #000 !important;
     }
-    
+
     .container {
         width: 100% !important;
         margin: 0 !important;

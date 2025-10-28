@@ -36,12 +36,12 @@ export async function downloadPDF() {
     }
     
     const opt = {
-      margin: [0.5, 0.5, 0.5, 0.5],
+      margin: [0.3, 0.5, 0.5, 0.5],
       filename: getDynamicPdfFilename(),
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowHeight: element.scrollHeight },
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      pagebreak: { mode: 'css', before: '.page-break' }
     };
     
     await html2pdf().set(opt).from(element).save();
@@ -69,12 +69,12 @@ export async function generatePDFBase64() {
     }
     
     const opt = {
-      margin: [0.5, 0.5, 0.5, 0.5],
+      margin: [0.3, 0.5, 0.5, 0.5],
       filename: getDynamicPdfFilename(),
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowHeight: element.scrollHeight },
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      pagebreak: { mode: 'css', before: '.page-break' }
     };
     
     const dataUri = await html2pdf().set(opt).from(element).outputPdf('datauristring');
