@@ -19,7 +19,7 @@ export function getDynamicPdfFilename() {
   const name = sanitizeFilename(nameInput?.value || 'Unknown');
   const date = sanitizeFilename(dateInput?.value || 'Unknown');
   
-  return `Expense_Claim_Form_`{name}_`{date}.pdf`;
+  return `Expense_Claim_Form_${name}_${date}.pdf`;
 }
 
 /**
@@ -107,7 +107,7 @@ export async function mergeAttachmentsPDF() {
       }
     });
     
-    console.log(`[ExpenseClaim] Found `{allFiles.length} attachments to merge.`);
+    console.log(`[ExpenseClaim] Found ${allFiles.length} attachments to merge.`);
     
     if (allFiles.length === 0) {
       return null;
@@ -138,16 +138,16 @@ export async function mergeAttachmentsPDF() {
         } else if (file.type === 'application/pdf') {
           // For PDF files, just add a placeholder
           // Full PDF merge would require pdf-lib or similar
-          doc.text(`[PDF Attachment: `{file.name}]`, 10, 20);
+          doc.text(`[PDF Attachment: ${file.name}]`, 10, 20);
           doc.text('PDF content not embedded', 10, 30);
         } else {
           // For other file types, just show filename
-          doc.text(`[File: `{file.name}]`, 10, 20);
-          doc.text(`Type: `{file.type || 'unknown'}`, 10, 30);
+          doc.text(`[File: ${file.name}]`, 10, 20);
+          doc.text(`Type: ${file.type || 'unknown'}`, 10, 30);
         }
       } catch (err) {
-        logError(`Failed to process attachment: `{file.name}`, err);
-        doc.text(`[Error reading file: `{file.name}]`, 10, 20);
+        logError(`Failed to process attachment: ${file.name}`, err);
+        doc.text(`[Error reading file: ${file.name}]`, 10, 20);
       }
     }
     
@@ -171,7 +171,7 @@ export function getAttachmentsPdfFilename() {
   const name = sanitizeFilename(nameInput?.value || 'Unknown');
   const date = sanitizeFilename(dateInput?.value || 'Unknown');
   
-  return `Expense_Claim_Form_Attachments_`{name}_`{date}.pdf`;
+  return `Expense_Claim_Form_Attachments_${name}_${date}.pdf`;
 }
 
 /**

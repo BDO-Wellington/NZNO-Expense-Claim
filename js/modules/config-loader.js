@@ -15,7 +15,7 @@ export async function loadConfig() {
     const response = await fetch('config.json', { cache: 'no-store' });
     
     if (!response.ok) {
-      throw new Error(`Failed to load config.json: HTTP `{response.status});
+      throw new Error(`Failed to load config.json: HTTP ${response.status}`);
     }
     
     const config = await response.json();
@@ -45,7 +45,7 @@ export function validateConfig(config) {
   
   for (const field of requiredFields) {
     if (!(field in config)) {
-      throw new Error(`Missing required configuration field: `{field});
+      throw new Error(`Missing required configuration field: ${field}`);
     }
   }
   
@@ -58,7 +58,7 @@ export function validateConfig(config) {
   const validDebugModes = ['DEBUG', 'PRODUCTION'];
   if (typeof config.DEBUG_MODE !== 'string' || 
       !validDebugModes.includes(config.DEBUG_MODE.toUpperCase())) {
-    throw new Error('DEBUG_MODE must be either \"DEBUG\" or \"PRODUCTION\"');
+    throw new Error('DEBUG_MODE must be either "DEBUG" or "PRODUCTION"');
   }
   
   // Normalize boolean values
@@ -87,12 +87,12 @@ function parseBooleanConfig(value) {
  */
 export function showConfigError(error) {
   document.body.innerHTML = `
-    <div class=\"container mt-5\">
-      <div class=\"alert alert-danger\" role=\"alert\">
-        <h4 class=\"alert-heading\">Configuration Error</h4>
+    <div class="container mt-5">
+      <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Configuration Error</h4>
         <p>Failed to load application configuration.</p>
         <hr>
-        <p class=\"mb-0\">Please contact support or check the browser console for details.</p>
+        <p class="mb-0">Please contact support or check the browser console for details.</p>
       </div>
     </div>
   `;

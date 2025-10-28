@@ -21,8 +21,8 @@ async function collectStandardExpenses() {
   
   for (const row of standardRows) {
     const type = row.cells[0].textContent.trim();
-    const amountInput = row.querySelector('input[type=\"number\"]');
-    const fileInput = row.querySelector('input[type=\"file\"]');
+    const amountInput = row.querySelector('input[type="number"]');
+    const fileInput = row.querySelector('input[type="file"]');
     
     const amount = amountInput ? safeParseFloat(amountInput.value, 0) : 0;
     const attachments = await collectAttachments(fileInput);
@@ -48,11 +48,11 @@ async function collectOtherExpenses() {
   const otherRows = document.querySelectorAll('#otherExpensesBody tr');
   
   for (const row of otherRows) {
-    const description = row.querySelector('input[name=\"other_description[]\"]')?.value || '';
-    const amountInput = row.querySelector('input[name=\"other_amount[]\"]');
+    const description = row.querySelector('input[name="other_description[]"]')?.value || '';
+    const amountInput = row.querySelector('input[name="other_amount[]"]');
     const amount = amountInput ? safeParseFloat(amountInput.value, 0) : 0;
     
-    const attachmentInput = row.querySelector('input[name=\"other_attachment[]\"]');
+    const attachmentInput = row.querySelector('input[name="other_attachment[]"]');
     const attachments = await collectAttachments(attachmentInput);
     
     otherExpenses.push({
@@ -94,7 +94,7 @@ function buildLineItemsJSON(expenseItems, vehicleData) {
   expenseItems.forEach(item => {
     if (item.amount > 0) {
       const description = item.type === 'Other' 
-        ? `Other Expenses - `{item.description}`
+        ? `Other Expenses - ${item.description}`
         : item.type;
       
       lineItems.push({
@@ -110,7 +110,7 @@ function buildLineItemsJSON(expenseItems, vehicleData) {
   // Add private vehicle if applicable
   if (vehicleData.kms > 0 && vehicleData.amount > 0) {
     const description = vehicleData.comment 
-      ? `Private Vehicle - `{vehicleData.comment}`
+      ? `Private Vehicle - ${vehicleData.comment}`
       : 'Private Vehicle';
     
     lineItems.push({
@@ -155,7 +155,6 @@ async function submitSingleItem(item, formData, apiUrl) {
     
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     
@@ -244,7 +243,6 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl) {
     // Submit to API
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     
