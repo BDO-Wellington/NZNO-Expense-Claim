@@ -187,17 +187,28 @@ TODO: Fix page breaks for PDF export and ensure all elements are styled correctl
     -->
     <script>
     // =============================
-    // Configuration
+    // Configuration Loader
     // =============================
     /**
-     * Configuration object for environment variables and endpoints.
-     * TODO: Replace placeholders with secure environment injection.
+     * Loads config.json and initializes the app after config is loaded.
      */
-    const CONFIG = {
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: window.varFlowEnvUpload !== undefined && window.varFlowEnvUpload !== "" ? window.varFlowEnvUpload : false, // Default: false
-      API_URL: window.varFlowUrlPostRequest !== undefined && window.varFlowUrlPostRequest !== "" ? window.varFlowUrlPostRequest : "https://example.com/api/submit", // Default: example endpoint
-      DEBUG_MODE: window.varDebugMode !== undefined && window.varDebugMode !== "" ? window.varDebugMode : "PRODUCTION" // Default: PRODUCTION
-    };
+    let CONFIG = null;
+    async function loadConfigAndInit() {
+      try {
+        const response = await fetch('config.json', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to load config.json');
+        CONFIG = await response.json();
+        if (!CONFIG) throw new Error('Config is empty');
+        // Now that config is loaded, initialize the app
+        //initExpenseClaimApp();
+      } catch (err) {
+        document.body.innerHTML = '<div class="container mt-5"><div class="alert alert-danger">Failed to load configuration. Please contact support.</div></div>';
+        console.error('Failed to load config.json:', err);
+      }
+    }
+
+    // Call loader on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', loadConfigAndInit);
 
     // =============================
     // Expense Types Definition
