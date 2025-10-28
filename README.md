@@ -53,6 +53,21 @@ Edit `config.json` to set your API endpoint and options:
 
 You need a local web server (not just opening the HTML file):
 
+**Quick Start (Recommended):**
+
+Windows:
+```cmd
+start-server.bat
+```
+
+Mac/Linux:
+```bash
+chmod +x start-server.sh
+./start-server.sh
+```
+
+**Manual Start:**
+
 ```bash
 # Using Python 3
 python -m http.server 8000
@@ -64,7 +79,7 @@ npx http-server -p 8000
 php -S localhost:8000
 ```
 
-Then open `http://localhost:8000` in your browser.
+Then open `http://localhost:8000/index.html` in your browser.
 
 #### Option C: Other Hosting
 
