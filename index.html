@@ -1,0 +1,749 @@
+<!--
+Expense Claims Submission Form
+Author: James McNeil
+Date: 08 July 2025
+
+Description:
+This HTML file provides a form for submitting expense claims, including standard expenses, private vehicle mileage, and other expenses. It supports file attachments, PDF export, and submission to a backend endpoint (e.g., Power Automate or SharePoint). The code is structured for maintainability, security, and accessibility.
+
+Best Practices:
+- All sensitive configuration (API URLs, environment flags) should be managed outside the code or injected securely.
+- Error handling and user feedback are implemented for all major operations.
+- Accessibility and print-friendliness are considered in the design.
+
+TODO: Fix page breaks for PDF export and ensure all elements are styled correctly for print.
+-->
+<!DOCTYPE html>
+<html lang="en-NZ">
+<head>
+    <meta charset="UTF-8">
+    <title>Expense Claim Submission Form</title>
+    
+    <!-- Start Single Page Apps for GitHub Pages -->
+    <script type="text/javascript">
+        // Single Page Apps for GitHub Pages
+        // MIT License
+        // https://github.com/rafgraph/spa-github-pages
+        // This script checks to see if a redirect is present in the query string,
+        // converts it back into the correct url and adds it to the
+        // browser's history using window.history.replaceState(...),
+        // which won't cause the browser to attempt to load the new url.
+        // When the single page app is loaded further down in this file,
+        // the correct url will be waiting in the browser's history for
+        // the single page app to route accordingly.
+        (function(l) {
+            if (l.search[1] === '/' ) {
+                var decoded = l.search.slice(1).split('&').map(function(s) { 
+                    return s.replace(/~and~/g, '&')
+                }).join('?');
+                window.history.replaceState(null, null,
+                    l.pathname.slice(0, -1) + decoded + l.hash
+                );
+            }
+        }(window.location))
+    </script>
+    <!-- End Single Page Apps for GitHub Pages -->
+    
+    <!-- Bootstrap CSS for responsive layout -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Table file input width */
+        .table td input[type="file"] { width: 100%; }
+        /* Print-friendly styles */
+        .print-friendly input,
+        .print-friendly button,
+        .print-friendly select,
+        .print-friendly textarea {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            pointer-events: none !important;
+        }
+        .print-friendly input[type="file"],
+        .print-friendly .btn,
+        .print-friendly .alert,
+        .print-friendly #attachmentsError,
+        .print-friendly #alert-container {
+            display: none !important;
+        }
+        .print-friendly .attachment-filename { display: inline !important; }
+        .print-friendly .page-break { page-break-after: always; }
+        /* Improved table cell padding for better margins */
+        .table th, .table td { padding: 0.75rem 1.25rem !important; vertical-align: middle; }
+        @media print {
+            body:not(.print-friendly) { display: none; }
+            .print-friendly {
+                background: #fff !important;
+                color: #000 !important;
+            }
+            .container { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        }
+        /* Two-column layout for member and expense details */
+        .details-row { display: flex; flex-wrap: wrap; gap: 2rem; }
+        .details-col { flex: 1 1 300px; min-width: 250px; }
+    </style>
+</head>
+<body>
+    <main class="container mt-5" role="main">
+        <h2>Expense Claim Submission</h2>
+        <!-- Expense Claim Form -->
+        <form id="expenseForm" autocomplete="off" aria-label="Expense Claim Form">
+            <!-- Two-column layout for details -->
+            <div class="details-row">
+                <div class="details-col">
+                    <section class="form-group">
+                        <label for="fullName">Full Name <span style="color:red">*</span></label>
+                        <input type="text" class="form-control" id="fullName" name="fullName" required aria-required="true">
+                    </section>
+                    <section class="form-group">
+                        <label for="employeeId">Employee ID <span style="color:red">*</span></label>
+                        <input type="text" class="form-control" id="employeeId" name="employeeId" required aria-required="true">
+                    </section>
+                </div>
+                <div class="details-col">
+                    <section class="form-group">
+                        <label for="expenseDate">Expense Claim Date <span style="color:red">*</span></label>
+                        <input type="date" class="form-control" id="expenseDate" name="expenseDate" required aria-required="true">
+                    </section>
+                </div>
+            </div>
+
+            <!-- Standard Expenses Table -->
+            <h4>Standard Expenses</h4>
+            <table class="table table-bordered" id="StandardExpensesTable">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount (NZD)</th>
+                        <th>Attachment</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <!-- Page break before Private Vehicle section for PDF/Print -->
+            <div class="page-break"></div>
+
+            <!-- Private Vehicle Section -->
+            <section class="form-section">
+                <h4>Private Vehicle</h4>
+                <div class="form-row">
+                    <div class="form-group col-md-3">
+                        <label for="kms">Kilometres</label>
+                        <input type="number" class="form-control" id="kms" name="kms" step="0.01">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="rate">Rate (NZD/km)</label>
+                        <input type="number" class="form-control" id="rate" name="rate" value="1.04" readonly>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="vehicleAmount">Amount (NZD)</label>
+                        <input type="number" class="form-control" id="vehicleAmount" name="vehicleAmount" readonly>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="vehicleComment">Comment/Description</label>
+                        <input type="text" class="form-control" id="vehicleComment" name="vehicleComment">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Other Expenses Section -->
+            <section class="form-section">
+                <h4>Other Expenses</h4>
+                <table class="table table-bordered" id="otherExpensesTable">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount (NZD)</th>
+                            <th>Attachment</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="otherExpensesBody">
+                        <tr>
+                            <td><input type="text" class="form-control" name="other_description[]"></td>
+                            <td><input type="number" class="form-control" name="other_amount[]" step="0.01"></td>
+                            <td><input type="file" class="form-control-file" name="other_attachment[]" multiple></td>
+                            <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-secondary mb-3" onclick="addRow()">Add Other Expense</button>
+            </section>
+
+            <button type="submit" class="btn btn-primary">Submit Claim</button>
+        </form>
+        <div id="attachmentsError" class="alert alert-danger mt-2" style="display:none;"></div>
+        <button type="button" class="btn btn-primary" onclick="saveAsPDF()">Download as PDF</button>
+        <div id="alert-container" class="mt-3" role="alert"></div>
+    </main>
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!--
+      =============================
+      JavaScript Section
+      =============================
+    -->
+    <script>
+    // =============================
+    // Configuration
+    // =============================
+    /**
+     * Configuration object for environment variables and endpoints.
+     * TODO: Replace placeholders with secure environment injection.
+     */
+    const CONFIG = {
+      SUBMIT_INDIVIDUAL_LINE_ITEMS: window.varFlowEnvUpload !== undefined && window.varFlowEnvUpload !== "" ? window.varFlowEnvUpload : false, // Default: false
+      API_URL: window.varFlowUrlPostRequest !== undefined && window.varFlowUrlPostRequest !== "" ? window.varFlowUrlPostRequest : "https://example.com/api/submit", // Default: example endpoint
+      DEBUG_MODE: window.varDebugMode !== undefined && window.varDebugMode !== "" ? window.varDebugMode : "PRODUCTION" // Default: PRODUCTION
+    };
+
+    // =============================
+    // Expense Types Definition
+    // =============================
+    /**
+     * List of standard expense types and their account codes.
+     */
+    const expenseTypes = [
+      { name: "Flights", accountCode: "480" },
+      { name: "Rental Car", accountCode: "486" },
+      { name: "Fares - Bus/Rail", accountCode: "476" },
+      { name: "Taxi/Uber", accountCode: "482" },
+      { name: "Parking", accountCode: "482" },
+      { name: "Accommodation", accountCode: "484" },
+      { name: "Meals", accountCode: "484" }
+    ];
+
+    // =============================
+    // DOM Manipulation & Event Setup
+    // =============================
+    /**
+     * Dynamically generate rows for standard expenses.
+     */
+    const tableBody = document.querySelector("#StandardExpensesTable tbody");
+    tableBody.innerHTML = expenseTypes.map(type => `
+      <tr>
+        <td>${type.name}</td>
+        <td><input type="number" class="form-control" name="${type.name.toLowerCase().replace(/\s+/g, '')}Amount" step="0.01"></td>
+        <td><input type="file" class="form-control-file" name="${type.name.toLowerCase().replace(/\s+/g, '')}Attachments" multiple></td>
+      </tr>
+    `).join("");
+
+    // =============================
+    // Utility Functions
+    // =============================
+    /**
+     * Converts a File object to a base64 string (without data URL prefix).
+     * @param {File} file
+     * @returns {Promise<string>}
+     */
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    /**
+     * Collects all attachments from a file input as base64 objects.
+     * @param {HTMLInputElement} fileInput
+     * @returns {Promise<Array<{filename: string, content: string}>>}
+     */
+    async function collectAttachments(fileInput) {
+      const attachments = [];
+      if (fileInput && fileInput.files.length > 0) {
+        for (let i = 0; i < fileInput.files.length; i++) {
+          const file = fileInput.files[i];
+          try {
+            const base64 = await fileToBase64(file);
+            attachments.push({ filename: file.name, content: base64 });
+          } catch (error) {
+            const errorContainer = document.getElementById('attachmentsError');
+            if (errorContainer) {
+              errorContainer.textContent = "Failed to process attachments.";
+              errorContainer.style.display = "block";
+            }
+            break;
+          }
+        }
+      }
+      return attachments;
+    }
+
+    /**
+     * Adds a new row to the Other Expenses table.
+     */
+    function addRow() {
+      const tableBody = document.getElementById("otherExpensesBody");
+      const newRow = document.createElement("tr");
+      newRow.innerHTML = `
+        <td><input type="text" class="form-control" name="other_description[]"></td>
+        <td><input type="number" class="form-control" name="other_amount[]" step="0.01"></td>
+        <td><input type="file" class="form-control-file" name="other_attachment[]" multiple></td>
+        <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
+      `;
+      tableBody.appendChild(newRow);
+    }
+
+    /**
+     * Removes a row from the Other Expenses table.
+     * @param {HTMLElement} button
+     */
+    function removeRow(button) {
+      const row = button.closest("tr");
+      if (row) row.remove();
+    }
+
+    // =============================
+    // Business Logic Functions
+    // =============================
+    /**
+     * Builds a JSON array of all line items for SharePoint or backend submission.
+     * @returns {string} JSON string of line items
+     */
+    function getLineItemsJSON() {
+      const rows = document.querySelectorAll("#StandardExpensesTable tbody tr, #otherExpensesBody tr");
+      const lineItems = [];
+      rows.forEach((row) => {
+        // Standard Expenses
+        if (row.closest("#StandardExpensesTable")) {
+          const description = row.cells[0]?.textContent?.trim() || "";
+          const amount = parseFloat(row.querySelector("input[type='number']")?.value) || 0;
+          if (amount > 0) {
+            const typeObj = expenseTypes.find(t => t.name === description);
+            const accountCode = typeObj ? typeObj.accountCode : "";
+            lineItems.push({
+              description: description,
+              quantity: 1,
+              amount: amount,
+              accountCode: accountCode,
+              taxType: ""
+            });
+          }
+        }
+        // Other Expenses
+        else if (row.closest("#otherExpensesTable")) {
+          const description = row.querySelector("input[name='other_description[]']")?.value || "";
+          const amount = parseFloat(row.querySelector("input[name='other_amount[]']")?.value) || 0;
+          if (amount > 0) {
+            lineItems.push({
+              description: "Other Expenses - " + description,
+              quantity: 1,
+              amount: amount,
+              accountCode: "",
+              taxType: ""
+            });
+          }
+        }
+      });
+      // Add Private Vehicle as a line item if kms > 0 and amount > 0
+      const kms = parseFloat(document.getElementById("kms")?.value) || 0;
+      const rate = parseFloat(document.getElementById("rate")?.value) || 0;
+      const vehicleAmount = parseFloat(document.getElementById("vehicleAmount")?.value) || 0;
+      const vehicleComment = document.getElementById("vehicleComment")?.value || "";
+      if (kms > 0 && vehicleAmount > 0) {
+        lineItems.push({
+          description: "Private Vehicle" + (vehicleComment ? " - " + vehicleComment : ""),
+          quantity: 1,
+          amount: vehicleAmount,
+          accountCode: "481",
+          taxType: ""
+        });
+      }
+      return JSON.stringify(lineItems, null, 2);
+    }
+
+    // =============================
+    // Event Listeners
+    // =============================
+    // Calculate vehicle amount on input
+    document.getElementById("kms").addEventListener("input", function() {
+      const kms = parseFloat(this.value) || 0;
+      const rate = 1.04;
+      document.getElementById("vehicleAmount").value = (kms * rate).toFixed(2);
+    });
+
+    // =============================
+    // Form Submission Handler
+    // =============================
+    /**
+     * Handles form submission, collects all data, and submits to backend.
+     * Includes error handling and user feedback.
+     */
+    document.getElementById("expenseForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const form = event.target;
+
+      // Parse environment flag for submission mode
+      let submitIndividually = CONFIG.SUBMIT_INDIVIDUAL_LINE_ITEMS;
+      if (submitIndividually === "true" || submitIndividually === true) {
+        submitIndividually = true;
+      } else {
+        submitIndividually = false;
+      }
+
+      // Collect Standard Expenses
+      const standardExpenses = [];
+      const standardRows = document.querySelectorAll("#StandardExpensesTable tbody tr");
+      for (const row of standardRows) {
+        const type = row.cells[0].textContent.trim();
+        const amountInput = row.querySelector("input[type='number']");
+        const fileInput = row.querySelector("input[type='file']");
+        const amount = amountInput ? parseFloat(amountInput.value) || 0 : 0;
+        const attachments = await collectAttachments(fileInput);
+        standardExpenses.push({ type, amount, description: "", attachments });
+      }
+
+      // Collect Other Expenses
+      const otherExpenses = [];
+      const otherRows = document.querySelectorAll("#otherExpensesBody tr");
+      for (const row of otherRows) {
+        const description = row.querySelector("input[name='other_description[]']")?.value || "";
+        const amountRaw = row.querySelector("input[name='other_amount[]']")?.value || "0";
+        const amount = parseFloat(amountRaw) || 0;
+        const attachmentInput = row.querySelector("input[name='other_attachment[]']");
+        const attachments = await collectAttachments(attachmentInput);
+        otherExpenses.push({ type: "Other", amount, description, attachments });
+      }
+
+      // Collect Private Vehicle
+      const vehicle = {
+        kms: parseFloat(form.kms?.value) || 0,
+        rate: parseFloat(form.rate?.value) || 0,
+        amount: parseFloat(form.vehicleAmount?.value) || 0,
+        comment: form.vehicleComment?.value || "",
+      };
+
+      const expenseItems = [...standardExpenses, ...otherExpenses];
+      const formData = {
+        varFlowEnvUpload: submitIndividually,
+        fullName: form.fullName?.value || "",
+        employeeId: form.employeeId?.value || "",
+        expenseDate: form.expenseDate?.value || ""
+      };
+
+      try {
+        if (submitIndividually) {
+          // Submit each line item individually
+          for (const item of expenseItems) {
+            const singleItemData = { ...formData, expenseItems: [item] };
+            const response = await fetch(CONFIG.API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(singleItemData),
+            });
+            if (!response.ok) {
+              showAlert("Failed to submit one or more expense line items.", "danger");
+              return;
+            }
+          }
+          showAlert("Successfully submitted all expense line items.", "success");
+          setFormToViewMode(form);
+        } else {
+          // Submit all line items as a single JSON
+          const lineItemsJSON = getLineItemsJSON();
+          const payload = { ...formData, lineItems: lineItemsJSON };
+          // Generate summary PDF (form)
+          let pdfBase64;
+          try {
+            pdfBase64 = await generatePDFBase64Dynamic();
+          } catch (err) {
+            logError('PDF generation failed before form submit', err);
+            showAlert('Failed to generate PDF. Submission aborted.', 'danger');
+            return;
+          }
+          const pdfFilename = getDynamicPdfFilename();
+          payload.summaryPdfAttachment = {
+            filename: pdfFilename,
+            content: pdfBase64
+          };
+          // Merge all attachments into a single PDF
+          let mergedAttachmentsBase64 = null;
+          let mergedAttachmentsFilename = null;
+          try {
+            mergedAttachmentsBase64 = await mergeAllAttachmentsToPdfBase64();
+            if (mergedAttachmentsBase64) {
+              const name = (form.fullName?.value || 'Unknown').replace(/[^a-zA-Z0-9]/g, '_');
+              const date = (form.expenseDate?.value || 'Unknown').replace(/[^0-9-]/g, '_');
+              mergedAttachmentsFilename = `Expense_Claim_Form_Attachments_${name}_${date}.pdf`;
+              payload.attachmentsPdf = {
+                filename: mergedAttachmentsFilename,
+                content: mergedAttachmentsBase64
+              };
+            }
+          } catch (err) {
+            logError('Attachment merge failed', err);
+            // Continue without merged attachments
+          }
+          let response;
+          try {
+            response = await fetch(CONFIG.API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+          } catch (err) {
+            logError('Network error during form submission', err);
+            showAlert('Network error during form submission.', 'danger');
+            return;
+          }
+          if (response.ok) {
+            showAlert("Successfully submitted the expense form.", "success");
+            setFormToViewMode(form);
+          } else {
+            logError('Form submission failed', response);
+            showAlert("Failed to submit the expense form.", "danger");
+          }
+        }
+      } catch (error) {
+        logError('Unexpected error during form submission', error);
+        showAlert("Failed to submit the expense form.", "danger");
+      }
+    }, { once: true });
+
+    // =============================
+    // UI Feedback & State Functions
+    // =============================
+    /**
+     * Shows a Bootstrap alert message in the alert container.
+     * @param {string} message
+     * @param {string} type (success, danger, etc.)
+     */
+    function showAlert(message, type) {
+      const alertContainer = document.getElementById("alert-container");
+      if (alertContainer) {
+        alertContainer.innerHTML = `
+          <div class="alert alert-${type}" role="alert">
+            ${message}
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Sets the form to view-only mode after successful submission.
+     * Disables all inputs except buttons.
+     * @param {HTMLFormElement} form
+     */
+    function setFormToViewMode(form) {
+      try {
+        Array.from(form.elements).forEach((element) => {
+          if (element.tagName.toLowerCase() !== "button") {
+            element.disabled = true;
+          }
+        });
+        form.querySelectorAll('input[type="file"]').forEach(input => { input.disabled = true; });
+        form.querySelectorAll('a').forEach(link => {
+          link.onclick = (e) => e.preventDefault();
+          link.style.pointerEvents = "none";
+          link.style.color = "#6c757d";
+        });
+        form.querySelectorAll('.btn, .custom-control-input').forEach(ctrl => { ctrl.disabled = true; });
+        const submitButton = form.querySelector("button[type='submit']");
+        if (submitButton) { submitButton.style.display = "none"; }
+      } catch (err) {
+        logError('Error setting form to view mode', err);
+      }
+    }
+
+    // =============================
+    // PDF Export Functionality
+    // =============================
+    function getDynamicPdfFilename() {
+      const name = (document.getElementById('fullName')?.value || 'Unknown').replace(/[^a-zA-Z0-9]/g, '_');
+      const date = (document.getElementById('expenseDate')?.value || 'Unknown').replace(/[^0-9-]/g, '_');
+      return `Expense_Claim_Form_${name}_${date}.pdf`;
+    }
+    function saveAsPDF() {
+      try {
+        var main = document.querySelector('main.container');
+        if (main) {
+          main.classList.add('print-friendly');
+          // Ensure all elements with class 'page-break' are visible for print/PDF
+          document.querySelectorAll('.page-break').forEach(el => {
+            el.style.display = 'block';
+          });
+        }
+        window.scrollTo(0, 0);
+        const element = document.querySelector('.container');
+        const opt = {
+          margin: [0.5, 0.5, 0.5, 0.5],
+          filename: getDynamicPdfFilename(),
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+        html2pdf().set(opt).from(element).save().then(() => {
+          if (main) main.classList.remove('print-friendly');
+        }).catch(err => {
+          logError('PDF export failed', err);
+          showAlert('Failed to export PDF.', 'danger');
+          if (main) main.classList.remove('print-friendly');
+        });
+      } catch (err) {
+        logError('PDF export error', err);
+        showAlert('Failed to export PDF.', 'danger');
+        var main = document.querySelector('main.container');
+        if (main) main.classList.remove('print-friendly');
+      }
+    }
+
+    // =============================
+    // PDF Generation Utility (Dynamic Filename)
+    // =============================
+    async function generatePDFBase64Dynamic() {
+      var main = document.querySelector('main.container');
+      if (main) main.classList.add('print-friendly');
+      window.scrollTo(0, 0);
+      const element = document.querySelector('.container');
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: getDynamicPdfFilename(),
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+      return new Promise((resolve) => {
+        html2pdf().set(opt).from(element).outputPdf('datauristring').then(dataUri => {
+          if (main) main.classList.remove('print-friendly');
+          const base64 = dataUri.split(',')[1];
+          resolve(base64);
+        });
+      });
+    }
+
+    // =============================
+    // Merge All Attachments Utility
+    // =============================
+    async function mergeAllAttachmentsToPdfBase64() {
+      // Collect all attachments from all file inputs
+      const allFiles = [];
+      document.querySelectorAll('input[type="file"]').forEach(input => {
+      if (input.files && input.files.length > 0) {
+        for (let i = 0; i < input.files.length; i++) {
+        allFiles.push(input.files[i]);
+        }
+      }
+      });
+      console.log(`[ExpenseClaim] Found ${allFiles.length} attachments to merge.`);
+      if (allFiles.length === 0) {
+      logError('No attachments found to merge.', null);
+      return null;
+      }
+      // Create a PDF with each file as a page (images/pdf only, others as filename list)
+      const { jsPDF } = window.jspdf || {};
+      if (!jsPDF) {
+      showAlert('PDF library not loaded for attachment merge.', 'danger');
+      logError('PDF library (jsPDF) not loaded for attachment merge.', null);
+      return null;
+      }
+      const doc = new jsPDF();
+      let firstPage = true;
+      for (const file of allFiles) {
+      if (!firstPage) doc.addPage();
+      firstPage = false;
+      try {
+        if (file.type.startsWith('image/')) {
+        // Add image
+        const imgData = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        doc.addImage(imgData, 'JPEG', 10, 10, 180, 250);
+        doc.text(file.name, 10, 265);
+        } else if (file.type === 'application/pdf') {
+        // Add PDF pages
+        // NOTE: For simplicity, just add filename (full PDF merge requires pdf-lib or similar)
+        doc.text(`[PDF Attachment: ${file.name}]`, 10, 20);
+        } else {
+        doc.text(`[File: ${file.name}]`, 10, 20);
+        }
+      } catch (err) {
+        logError(`Failed to process attachment: ${file.name}`, err);
+        doc.text(`[Error reading file: ${file.name}]`, 10, 20);
+      }
+      }
+      return doc.output('datauristring').split(',')[1];
+    }
+
+    // =============================
+    // DOMContentLoaded: Set default date and render attachment filenames
+    // =============================
+    document.addEventListener('DOMContentLoaded', function() {
+      // Ensure print-friendly class is NOT present on body or main on load
+      document.body.classList.remove('print-friendly');
+      var main = document.querySelector('main.container');
+      if (main) main.classList.remove('print-friendly');
+
+      // Set default date to today for expenseDate
+      const dateInput = document.getElementById('expenseDate');
+      if (dateInput) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+      }
+      renderAttachmentFilenames();
+      // Hide Download as PDF button if in DEBUG mode
+      if (CONFIG.DEBUG_MODE && CONFIG.DEBUG_MODE.toUpperCase() === 'DEBUG') {
+        const pdfBtn = document.querySelector('button[onclick="saveAsPDF()"]');
+        if (pdfBtn) pdfBtn.style.display = 'none';
+      }
+    });
+
+    // =============================
+    // Attachment Filename Rendering for Print/PDF
+    // =============================
+    function renderAttachmentFilenames() {
+      // For each file input, show filenames in a span for print
+      document.querySelectorAll('input[type="file"]').forEach(input => {
+        let span = input.parentNode.querySelector('.attachment-filename');
+        if (!span) {
+          span = document.createElement('span');
+          span.className = 'attachment-filename';
+          input.parentNode.appendChild(span);
+        }
+        // List filenames, remove fakepath
+        const files = input.files;
+        if (files && files.length > 0) {
+          span.textContent = Array.from(files).map(f => f.name).join(', ');
+        } else {
+          span.textContent = '';
+        }
+      });
+    }
+    // Update filenames on file input change
+    // (placed after DOMContentLoaded for correct event order)
+    document.addEventListener('change', function(e) {
+      if (e.target.type === 'file') renderAttachmentFilenames();
+    }, true);
+    // Also update before printing
+    function beforePrintHandler() { renderAttachmentFilenames(); }
+    window.addEventListener('beforeprint', beforePrintHandler);
+
+    // =============================
+    // Logging Utility
+    // =============================
+    /**
+     * Logs errors to the console and optionally to a backend endpoint.
+     * @param {string} message
+     * @param {Error|any} error
+     */
+    function logError(message, error) {
+      if (window.console && window.console.error) {
+        console.error(`[ExpenseClaim] ${message}:`, error);
+      }
+    }
+    // Optionally send error logs to a backend endpoint here
+      // Example:
+      // fetch('/log-error', { method: 'POST', body: JSON.stringify({ message, error: error?.stack || error }) });
+    </script>
+</html>
