@@ -1,6 +1,6 @@
 ﻿# NZNO Expense Claim Submission Form
 
-A web-based expense claim submission form that supports standard expenses, private vehicle mileage, and other expenses with file attachments. The form generates PDFs and submits data to a configurable backend endpoint.
+A modern, modular web-based expense claim submission form that supports standard expenses, private vehicle mileage, and other expenses with file attachments. The form generates PDFs and submits data to a configurable backend endpoint.
 
 ## Features
 
@@ -8,11 +8,39 @@ A web-based expense claim submission form that supports standard expenses, priva
 -  **Private Vehicle Mileage**: Automatic calculation at NZD $1.04/km
 -  **Other Expenses**: Dynamic rows for additional expense types
 -  **File Attachments**: Multiple file uploads per expense item
--  **PDF Export**: Download completed forms as PDF
+-  **PDF Export**: Download completed forms as PDF with optimized page breaks
 -  **PDF Merging**: Automatically merges all attachments into a single PDF for submission
 -  **Configurable Submission**: Load API endpoints and settings from `config.json`
 -  **Print-Friendly**: Optimized styling for printing and PDF generation
 -  **Responsive Design**: Bootstrap 4 for mobile and desktop compatibility
+-  **Modular Architecture**: Clean separation of concerns with ES6 modules
+
+## Project Structure
+
+```
+NZNO-Expense-Claim/
+ index.html                  # Main HTML structure
+ config.json                 # Application configuration
+ config.template.json        # Configuration template
+ 404.html                    # GitHub Pages 404 handler
+ .nojekyll                   # Prevents Jekyll processing
+ LICENSE                     # License file
+ README.md                   # This file
+ MODULARIZATION.md           # Modularization documentation
+ start-server.bat            # Windows server startup script
+ start-server.sh             # Mac/Linux server startup script
+ css/
+    styles.css             # All application styles
+ js/
+     app.js                 # Main entry point & initialization
+     modules/
+         config-loader.js   # Configuration loading & validation
+         expense-types.js   # Expense type definitions & constants
+         form-handler.js    # Form submission & data collection
+         pdf-generator.js   # PDF generation & merging
+         ui-handlers.js     # DOM manipulation & event handling
+         utils.js           # Utility functions
+```
 
 ## Quick Start
 
@@ -25,7 +53,13 @@ cd NZNO-Expense-Claim/NZNO-Expense-Claim
 
 ### 2. Configure the Application
 
-Edit `config.json` to set your API endpoint and options:
+Copy the template and edit `config.json` to set your API endpoint and options:
+
+```bash
+cp config.template.json config.json
+```
+
+Edit `config.json`:
 
 ```json
 {
@@ -51,9 +85,9 @@ Edit `config.json` to set your API endpoint and options:
 
 #### Option B: Local Development
 
-You need a local web server (not just opening the HTML file):
+You need a local web server (not just opening the HTML file due to ES6 modules):
 
-**Quick Start (Recommended):**
+**Quick Start Scripts (Recommended):**
 
 Windows:
 ```cmd
@@ -72,7 +106,7 @@ chmod +x start-server.sh
 # Using Python 3
 python -m http.server 8000
 
-# Using Node.js (install http-server globally)
+# Using Node.js
 npx http-server -p 8000
 
 # Using PHP
@@ -88,6 +122,9 @@ Upload all files to any static hosting service:
 - Vercel
 - Azure Static Web Apps
 - AWS S3 + CloudFront
+- Cloudflare Pages
+
+**Note**: ES6 modules require proper MIME types, so ensure your hosting serves `.js` files as `application/javascript`.
 
 ## Usage
 
@@ -101,6 +138,7 @@ Upload all files to any static hosting service:
 2. **Standard Expenses**:
    - Enter amounts for applicable expense types
    - Attach receipts/documents for each expense
+   - Use arrow keys or click to change values (scroll wheel is disabled)
 
 3. **Private Vehicle**:
    - Enter kilometres driven
@@ -116,60 +154,110 @@ Upload all files to any static hosting service:
    - Click "Submit Claim" to send to the configured API
    - Or click "Download as PDF" to save locally
 
-## Project Structure
+## Module Overview
 
-```
-NZNO-Expense-Claim/
- index.html          # Main application file (single-page app)
- config.json         # Configuration (API endpoint, flags)
- 404.html            # GitHub Pages 404 handler
- .nojekyll           # Prevents Jekyll processing on GitHub Pages
- LICENSE             # License file
- README.md           # This file
-```
+### Core Modules
 
-## Modularization Recommendations
+#### `app.js` - Main Entry Point
+Initializes the application and wires up all modules. Handles:
+- Configuration loading
+- PDF library validation
+- UI initialization
+- Event listener setup
 
-### Current State
-The application is currently a **single-file HTML application** with embedded JavaScript and CSS. This works well for:
--  Simple deployment (just one file to manage)
--  No build process required
--  Easy to understand the entire flow
+#### `config-loader.js` - Configuration Management
+Loads and validates application configuration from `config.json`. Provides error handling and user feedback for configuration issues.
 
-### Recommended Modular Structure (Future Enhancement)
+#### `expense-types.js` - Expense Definitions
+Defines expense categories, account codes, and calculation constants:
+- Standard expense types (Flights, Rental Car, etc.)
+- Vehicle mileage rate ($1.04/km)
+- Helper functions for expense lookups
 
-For better maintainability and scalability, consider refactoring to:
+#### `ui-handlers.js` - User Interface
+Handles all DOM manipulation and UI updates:
+- Dynamic expense table generation
+- Add/remove expense rows
+- Vehicle amount calculation
+- Alert messages
+- Form state management
+- Print-friendly mode
+- Scroll wheel disabling on number inputs
 
-```
-NZNO-Expense-Claim/
- index.html (minimal structure)
- config.json
- css/
-    styles.css (all CSS extracted)
- js/
-    app.js (main initialization)
-    config-loader.js (CONFIG loading)
-    expense-types.js (expense definitions)
-    ui-handlers.js (DOM manipulation, event listeners)
-    form-handler.js (form submission logic)
-    pdf-generator.js (PDF generation functions)
-    utils.js (fileToBase64, logging, etc.)
- README.md
-```
+#### `form-handler.js` - Form Processing
+Manages form submission and data collection:
+- Form data extraction
+- File attachment handling
+- Individual vs bulk submission modes
+- API payload construction
+- Error handling and validation
 
-**Benefits of Modularization:**
-- Easier testing of individual modules
-- Better code organization and maintainability
-- Ability to use ES6 modules
-- Clearer separation of concerns
-- Easier to onboard new developers
+#### `pdf-generator.js` - PDF Generation
+Handles PDF creation and manipulation:
+- Form-to-PDF conversion
+- PDF download functionality
+- Attachment merging
+- Page break optimization
+- Print mode styling
 
-**To implement this:**
-1. Extract CSS to `css/styles.css`
-2. Split JavaScript into separate modules
-3. Use ES6 module imports (`<script type="module">`)
-4. Remove inline event handlers (`onclick`)
-5. Use a bundler like Vite or Webpack (optional)
+#### `utils.js` - Utility Functions
+Provides reusable helper functions:
+- File-to-Base64 conversion
+- Date formatting
+- Filename sanitization
+- Error logging
+- Attachment collection
+
+## Recent Improvements
+
+### Modularization (October 2025)
+-  Refactored from single-file to modular architecture
+-  Implemented ES6 modules for better code organization
+-  Separated concerns: UI, business logic, PDF generation
+-  Improved testability and maintainability
+
+### UI Enhancements
+-  Disabled scroll wheel on number inputs to prevent accidental changes
+-  Improved print-friendly styling
+-  Fixed page break issues in PDF generation
+-  Enhanced form validation and error messaging
+
+### PDF Improvements
+-  Optimized page break placement
+-  Prevented unwanted breaks after headings
+-  Reduced top margins for better layout
+-  Added explicit page break control
+
+## Development
+
+### Prerequisites
+- Modern web browser with ES6 module support
+- Local web server (Python, Node.js, or PHP)
+- Text editor or IDE
+
+### Testing
+To test the application locally:
+
+1. Start the local server:
+   ```bash
+   python -m http.server 8000
+   ```
+
+2. Open `http://localhost:8000/index.html` in your browser
+
+3. Test all features:
+   - Form filling and validation
+   - Dynamic row addition/removal
+   - File attachments
+   - PDF generation
+   - Form submission
+
+### Browser Console
+Open developer tools (F12) to view:
+- Configuration loading messages
+- PDF library validation
+- Module initialization logs
+- Error messages and debugging info
 
 ## Security Considerations
 
@@ -190,19 +278,76 @@ NZNO-Expense-Claim/
    - Don't include any sensitive information
    - Use environment-specific configs for different deployments
 
+4. **File Upload Security**:
+   - Backend should validate file types and sizes
+   - Scan uploads for malware
+   - Store files securely with appropriate access controls
+
 ## Browser Compatibility
 
--  Chrome 90+
+-  Chrome 90+ (Recommended)
 -  Firefox 88+
 -  Safari 14+
 -  Edge 90+
+
+**Note**: ES6 modules require modern browser support. For older browsers, consider using a bundler like Webpack or Vite.
+
+## Troubleshooting
+
+### Configuration Not Loading
+- Ensure `config.json` exists and is valid JSON
+- Check browser console for errors
+- Verify web server is serving JSON with correct MIME type
+
+### PDF Not Generating
+- Check browser console for library loading errors
+- Ensure html2pdf and jsPDF libraries are loading from CDN
+- Try clearing browser cache and reloading
+
+### Form Not Submitting
+- Verify API_URL in `config.json` is correct
+- Check browser console for network errors
+- Ensure backend endpoint is accessible and accepting requests
+- Check CORS settings on backend
+
+### ES6 Module Errors
+- Ensure you're accessing via HTTP (not file://)
+- Verify web server is serving .js files with correct MIME type
+- Check for typos in import paths
+
+## Future Enhancements
+
+### Planned Features
+- [ ] Unit tests with Vitest/Jest
+- [ ] TypeScript conversion
+
+### Might Do
+- [ ] Mobile app wrapper
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m ''Add some AmazingFeature''`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 
 See [LICENSE](LICENSE) file for details.
 
+## Support
+
+For issues, questions, or contributions:
+- Create an issue on GitHub
+- Contact the development team
+- Refer to [MODULARIZATION.md](MODULARIZATION.md) for architecture details
+
 ---
 
 **Author**: James McNeil  
 **Last Updated**: October 28, 2025  
+**Version**: 2.0 (Modular)  
 **Repository**: [BDO-Wellington/NZNO-Expense-Claim](https://github.com/BDO-Wellington/NZNO-Expense-Claim)
