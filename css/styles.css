@@ -1,0 +1,92 @@
+﻿/* ========================================
+   NZNO Expense Claim Form - Styles
+   Author: James McNeil
+   Date: October 28, 2025
+   ======================================== */
+
+/* Table file input width */
+.table td input[type="file"] {
+    width: 100%;
+}
+
+/* Print-friendly styles */
+.print-friendly input,
+.print-friendly button,
+.print-friendly select,
+.print-friendly textarea {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+}
+
+.print-friendly input[type="file"],
+.print-friendly .btn,
+.print-friendly .alert,
+.print-friendly #attachmentsError,
+.print-friendly #alert-container {
+    display: none !important;
+}
+
+.print-friendly .attachment-filename {
+    display: inline !important;
+}
+
+.print-friendly .page-break {
+    page-break-after: always;
+}
+
+/* Improved table cell padding for better margins */
+.table th,
+.table td {
+    padding: 0.75rem 1.25rem !important;
+    vertical-align: middle;
+}
+
+/* Print media query */
+@media print {
+    body:not(.print-friendly) {
+        display: none;
+    }
+    
+    .print-friendly {
+        background: #fff !important;
+        color: #000 !important;
+    }
+    
+    .container {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+
+/* Two-column layout for member and expense details */
+.details-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.details-col {
+    flex: 1 1 300px;
+    min-width: 250px;
+}
+
+/* Required field indicator */
+.required-indicator {
+    color: red;
+}
+
+/* Attachment filename display */
+.attachment-filename {
+    display: none;
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Hidden by default utility class */
+.d-none {
+    display: none;
+}
