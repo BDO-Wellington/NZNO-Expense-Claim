@@ -82,21 +82,21 @@ function collectVehicleData(form) {
 }
 
 /**
- * Builds a JSON array of all line items for submission.
+ * Builds an array of all line items for submission.
  * @param {Array<object>} expenseItems - All expense items
  * @param {object} vehicleData - Vehicle expense data
- * @returns {string} JSON string of line items
+ * @returns {Array<object>} Array of line items
  */
-function buildLineItemsJSON(expenseItems, vehicleData) {
+function buildLineItemsArray(expenseItems, vehicleData) {
   const lineItems = [];
-  
+
   // Add standard and other expenses
   expenseItems.forEach(item => {
     if (item.amount > 0) {
-      const description = item.type === 'Other' 
+      const description = item.type === 'Other'
         ? `Other Expenses - ${item.description}`
         : item.type;
-      
+
       lineItems.push({
         description,
         quantity: 1,
@@ -106,13 +106,13 @@ function buildLineItemsJSON(expenseItems, vehicleData) {
       });
     }
   });
-  
+
   // Add private vehicle if applicable
   if (vehicleData.kms > 0 && vehicleData.amount > 0) {
-    const description = vehicleData.comment 
+    const description = vehicleData.comment
       ? `Private Vehicle - ${vehicleData.comment}`
       : 'Private Vehicle';
-    
+
     lineItems.push({
       description,
       quantity: 1,
@@ -121,8 +121,8 @@ function buildLineItemsJSON(expenseItems, vehicleData) {
       taxType: ''
     });
   }
-  
-  return JSON.stringify(lineItems, null, 2);
+
+  return lineItems;
 }
 
 /**
@@ -202,9 +202,9 @@ async function submitIndividualItems(expenseItems, formData, apiUrl) {
  */
 async function submitBulk(expenseItems, vehicleData, formData, apiUrl) {
   try {
-    // Build line items JSON
-    const lineItemsJSON = buildLineItemsJSON(expenseItems, vehicleData);
-    
+    // Build line items array (NOT JSON string - Zapier needs actual array for child key iteration)
+    const lineItemsArray = buildLineItemsArray(expenseItems, vehicleData);
+
     // Generate summary PDF
     let pdfBase64;
     try {
@@ -214,18 +214,18 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl) {
       showAlert('Failed to generate PDF. Submission aborted.', 'danger');
       return false;
     }
-    
+
     // Build payload
     const payload = {
       ...formData,
       varFlowEnvUpload: false,
-      lineItems: lineItemsJSON,
+      lineItems: lineItemsArray, // Send as array for Zapier child key support
       summaryPdfAttachment: {
         filename: getDynamicPdfFilename(),
         content: pdfBase64
       }
     };
-    
+
     // Merge attachments into PDF
     try {
       const mergedPdfBase64 = await mergeAttachmentsPDF();
@@ -239,13 +239,16 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl) {
       logError('Attachment merge failed', err);
       // Continue without merged attachments
     }
-    
+
     // Submit to API
     const response = await fetch(apiUrl, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(payload)
     });
-    
+
     return response.ok;
   } catch (error) {
     logError('Bulk submission failed', error);
