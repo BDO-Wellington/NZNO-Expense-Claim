@@ -6,7 +6,10 @@
   "scripts": {
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage"
+    "test:coverage": "bun test --coverage",
+    "test:ci": "bun test --bail --coverage",
+    "test:filter": "bun test -t",
+    "test:flaky": "bun test --rerun-each 3"
   },
   "author": "James McNeil",
   "license": "MIT"

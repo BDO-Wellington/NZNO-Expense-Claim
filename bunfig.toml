@@ -1,0 +1,13 @@
+[test]
+# Preload setup file for common test configuration
+preload = ["./tests/setup.js"]
+
+# Test execution settings
+timeout = 5000
+
+# Coverage configuration
+coverage = true
+coverageThreshold = { line = 0.8, function = 0.8, statement = 0.8 }
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = ["**/tests/**", "**/__tests__/**"]
+coverageReporter = ["text"]
