@@ -22,6 +22,9 @@ Thumbs.db
 dist/
 build/
 
+# Test coverage
+coverage/
+
 # Logs
 *.log
 npm-debug.log*
