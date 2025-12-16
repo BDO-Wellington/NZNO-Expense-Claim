@@ -372,13 +372,31 @@ label span[style*="color:red"] {
 
 ## Logo Usage
 
+### Logo Assets
+
+Located in `assets/images/`:
+
+| File | Usage | Background |
+|------|-------|------------|
+| `NZNO_white.png` | Header, dark backgrounds | Purple `#501F74`, dark colors |
+| `NZNO_Landscape_red_grey_black.png` | Light backgrounds, print | White, light gray |
+
 ### Logo Variants
 - **White logo** (`NZNO_white.png`) - Use on purple/dark backgrounds
-- **Standard logo** - Use on light backgrounds
+- **Landscape logo** (`NZNO_Landscape_red_grey_black.png`) - Use on light backgrounds
 
 ### Logo Placement
 - Header: Left-aligned with navigation
 - Footer: Centered or left-aligned
+- PDF/Print: Use landscape version for better contrast
+
+### Logo Sizing
+```css
+.nzno-logo {
+  height: 40px;
+  width: auto;
+}
+```
 
 ### Clearance
 - Minimum clear space around logo equal to the height of "NZNO" text

@@ -72,6 +72,11 @@ body {
     gap: var(--nzno-spacing-md);
 }
 
+.nzno-logo {
+    height: 40px;
+    width: auto;
+}
+
 .nzno-logo-text {
     color: var(--nzno-white);
     font-size: 28px;
