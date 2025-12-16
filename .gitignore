@@ -22,7 +22,14 @@ Thumbs.db
 dist/
 build/
 
+# Test coverage
+coverage/
+
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
+nul
+
+# Claude
+.claude/settings.local.json
