@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Expense Types Module
  * Purpose: Define expense categories and their properties
  * Author: James McNeil

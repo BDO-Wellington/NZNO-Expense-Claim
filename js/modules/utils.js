@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Utility Functions Module
  * Purpose: Reusable utility functions for the Expense Claim application
  * Author: James McNeil

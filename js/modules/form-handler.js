@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Form Handler Module
  * Purpose: Handle form submission and data collection
  * Author: James McNeil

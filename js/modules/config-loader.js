@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Configuration Loader Module
  * Purpose: Load and validate application configuration
  * Author: James McNeil

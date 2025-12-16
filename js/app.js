@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Main Application Entry Point
  * Purpose: Initialize and wire up all modules
  * Author: James McNeil
