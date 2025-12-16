@@ -100,6 +100,56 @@ describe('submitBulk', () => {
     const payload = getFetchBody();
     expect(typeof payload.lineItems).toBe('string');
   });
+
+  test('returns false when PDF generation fails', async () => {
+    expect.assertions(1);
+
+    // Mock html2pdf to throw an error
+    const originalHtml2pdf = globalThis.html2pdf;
+    globalThis.html2pdf = mock(() => ({
+      set: mock(function() { return this; }),
+      from: mock(function() { return this; }),
+      outputPdf: mock(() => Promise.reject(new Error('PDF generation failed'))),
+    }));
+
+    const result = await submitBulk(
+      [],
+      { kms: 0, amount: 0, comment: '' },
+      { fullName: 'T', employeeId: 'E', expenseDate: '2025-12-15' },
+      'https://api.test.com',
+      { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false }
+    );
+
+    expect(result).toBe(false);
+
+    // Restore original mock
+    globalThis.html2pdf = originalHtml2pdf;
+  });
+
+  test('does not call fetch when PDF generation fails', async () => {
+    expect.assertions(1);
+
+    // Mock html2pdf to throw an error
+    const originalHtml2pdf = globalThis.html2pdf;
+    globalThis.html2pdf = mock(() => ({
+      set: mock(function() { return this; }),
+      from: mock(function() { return this; }),
+      outputPdf: mock(() => Promise.reject(new Error('PDF generation failed'))),
+    }));
+
+    await submitBulk(
+      [],
+      { kms: 0, amount: 0, comment: '' },
+      { fullName: 'T', employeeId: 'E', expenseDate: '2025-12-15' },
+      'https://api.test.com',
+      { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false }
+    );
+
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    // Restore original mock
+    globalThis.html2pdf = originalHtml2pdf;
+  });
 });
 
 describe('submitIndividualItems', () => {
