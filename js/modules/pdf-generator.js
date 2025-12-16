@@ -29,21 +29,58 @@ export function getDynamicPdfFilename() {
 export async function downloadPDF() {
   try {
     enablePrintMode();
-    
-    const element = document.querySelector('.container');
+
+    // Wait for DOM to stabilize after enabling print mode
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const element = document.querySelector('main.container');
     if (!element) {
       throw new Error('Container element not found');
     }
-    
+
+    // Force a reflow to ensure layout is stable
+    element.offsetHeight;
+
     const opt = {
       margin: [0.3, 0.5, 0.5, 0.5],
       filename: getDynamicPdfFilename(),
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowHeight: element.scrollHeight },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+        windowHeight: element.scrollHeight,
+        foreignObjectRendering: false,
+        logging: false,
+        ignoreElements: (el) => {
+          // Ignore browser extension elements and shadow roots
+          // Note: shadowRoot is null (not undefined) when absent, so use truthiness check
+          if (el.shadowRoot) return true;
+
+          // Common browser extensions that inject elements
+          const tagName = el.tagName?.toUpperCase() || '';
+          const extensionTags = [
+            'GRAMMARLY-EXTENSION',
+            'GRAMMARLY-DESKTOP-INTEGRATION',
+            'GRAMMARLY-POPUPS',
+            'LOOM-SHADOW-ROOT-CONTAINER',
+            'LASTPASS-ICON',
+            'BITWARDEN-PAGE-ICON'
+          ];
+          if (extensionTags.includes(tagName)) return true;
+
+          // Check for extension-related attributes
+          if (el.hasAttribute('data-lastpass-icon-root')) return true;
+          if (el.hasAttribute('data-grammarly-shadow-root')) return true;
+          if (el.className?.includes?.('grammarly')) return true;
+
+          return false;
+        }
+      },
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: 'css', before: '.page-break' }
     };
-    
+
     await html2pdf().set(opt).from(element).save();
     
     disablePrintMode();
@@ -62,21 +99,58 @@ export async function downloadPDF() {
 export async function generatePDFBase64() {
   try {
     enablePrintMode();
-    
-    const element = document.querySelector('.container');
+
+    // Wait for DOM to stabilize after enabling print mode
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const element = document.querySelector('main.container');
     if (!element) {
       throw new Error('Container element not found');
     }
-    
+
+    // Force a reflow to ensure layout is stable
+    element.offsetHeight;
+
     const opt = {
       margin: [0.3, 0.5, 0.5, 0.5],
       filename: getDynamicPdfFilename(),
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowHeight: element.scrollHeight },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+        windowHeight: element.scrollHeight,
+        foreignObjectRendering: false,
+        logging: false,
+        ignoreElements: (el) => {
+          // Ignore browser extension elements and shadow roots
+          // Note: shadowRoot is null (not undefined) when absent, so use truthiness check
+          if (el.shadowRoot) return true;
+
+          // Common browser extensions that inject elements
+          const tagName = el.tagName?.toUpperCase() || '';
+          const extensionTags = [
+            'GRAMMARLY-EXTENSION',
+            'GRAMMARLY-DESKTOP-INTEGRATION',
+            'GRAMMARLY-POPUPS',
+            'LOOM-SHADOW-ROOT-CONTAINER',
+            'LASTPASS-ICON',
+            'BITWARDEN-PAGE-ICON'
+          ];
+          if (extensionTags.includes(tagName)) return true;
+
+          // Check for extension-related attributes
+          if (el.hasAttribute('data-lastpass-icon-root')) return true;
+          if (el.hasAttribute('data-grammarly-shadow-root')) return true;
+          if (el.className?.includes?.('grammarly')) return true;
+
+          return false;
+        }
+      },
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: 'css', before: '.page-break' }
     };
-    
+
     const dataUri = await html2pdf().set(opt).from(element).outputPdf('datauristring');
     
     disablePrintMode();

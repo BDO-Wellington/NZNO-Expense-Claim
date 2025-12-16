@@ -42,27 +42,34 @@ export async function loadConfig() {
  */
 export function validateConfig(config) {
   const requiredFields = ['API_URL', 'DEBUG_MODE', 'SUBMIT_INDIVIDUAL_LINE_ITEMS'];
-  
+
   for (const field of requiredFields) {
     if (!(field in config)) {
       throw new Error(`Missing required configuration field: ${field}`);
     }
   }
-  
+
   // Validate API_URL format
   if (typeof config.API_URL !== 'string' || config.API_URL.trim() === '') {
     throw new Error('API_URL must be a non-empty string');
   }
-  
+
   // Validate DEBUG_MODE
   const validDebugModes = ['DEBUG', 'PRODUCTION'];
-  if (typeof config.DEBUG_MODE !== 'string' || 
+  if (typeof config.DEBUG_MODE !== 'string' ||
       !validDebugModes.includes(config.DEBUG_MODE.toUpperCase())) {
     throw new Error('DEBUG_MODE must be either "DEBUG" or "PRODUCTION"');
   }
-  
+
   // Normalize boolean values
   config.SUBMIT_INDIVIDUAL_LINE_ITEMS = parseBooleanConfig(config.SUBMIT_INDIVIDUAL_LINE_ITEMS);
+
+  // Set default for STRINGIFY_LINE_ITEMS_FOR_ZAPIER if not present
+  if (!('STRINGIFY_LINE_ITEMS_FOR_ZAPIER' in config)) {
+    config.STRINGIFY_LINE_ITEMS_FOR_ZAPIER = true; // Default to true for Xero compatibility
+  } else {
+    config.STRINGIFY_LINE_ITEMS_FOR_ZAPIER = parseBooleanConfig(config.STRINGIFY_LINE_ITEMS_FOR_ZAPIER);
+  }
 }
 
 /**
@@ -130,4 +137,13 @@ export function isDebugMode(config) {
  */
 export function shouldSubmitIndividually(config) {
   return parseBooleanConfig(getConfigValue(config, 'SUBMIT_INDIVIDUAL_LINE_ITEMS', false));
+}
+
+/**
+ * Checks if line items should be sent as JSON string (for Zapier Code actions).
+ * @param {object} config - Configuration object
+ * @returns {boolean} True if line items should be stringified
+ */
+export function shouldStringifyLineItems(config) {
+  return parseBooleanConfig(getConfigValue(config, 'STRINGIFY_LINE_ITEMS_FOR_ZAPIER', true));
 }

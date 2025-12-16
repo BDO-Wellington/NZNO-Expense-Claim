@@ -9,7 +9,7 @@ import { collectAttachments, logError, safeParseFloat } from './utils.js';
 import { EXPENSE_TYPES, getAccountCode, VEHICLE_ACCOUNT_CODE } from './expense-types.js';
 import { showAlert, setFormToViewMode } from './ui-handlers.js';
 import { generatePDFBase64, mergeAttachmentsPDF, getDynamicPdfFilename, getAttachmentsPdfFilename } from './pdf-generator.js';
-import { shouldSubmitIndividually } from './config-loader.js';
+import { shouldSubmitIndividually, shouldStringifyLineItems } from './config-loader.js';
 
 /**
  * Collects standard expense items from the form.
@@ -198,11 +198,12 @@ async function submitIndividualItems(expenseItems, formData, apiUrl) {
  * @param {object} vehicleData - Vehicle expense data
  * @param {object} formData - Basic form data
  * @param {string} apiUrl - API endpoint URL
+ * @param {object} config - Application configuration
  * @returns {Promise<boolean>} True if submission successful
  */
-async function submitBulk(expenseItems, vehicleData, formData, apiUrl) {
+async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
   try {
-    // Build line items array (NOT JSON string - Zapier needs actual array for child key iteration)
+    // Build line items array
     const lineItemsArray = buildLineItemsArray(expenseItems, vehicleData);
 
     // Generate summary PDF
@@ -215,36 +216,54 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl) {
       return false;
     }
 
+    // Determine how to send line items based on config
+    // - As Base64-encoded JSON string: for Zapier Code actions (prevents auto-parsing and flattening)
+    // - As array: for Zapier child key iteration or other integrations
+    const stringifyLineItems = shouldStringifyLineItems(config);
+    const lineItemsPayload = stringifyLineItems
+      ? btoa(JSON.stringify(lineItemsArray)) // Base64 encode to prevent Zapier from detecting and parsing JSON
+      : lineItemsArray;
+
+    // Build attachments array
+    const attachmentsArray = [{
+      fileName: getDynamicPdfFilename(),
+      mimeType: 'application/pdf',
+      content: pdfBase64
+    }];
+
+    // Merge attachments into PDF and add to array
+    try {
+      const mergedPdfBase64 = await mergeAttachmentsPDF();
+      if (mergedPdfBase64) {
+        attachmentsArray.push({
+          fileName: getAttachmentsPdfFilename(),
+          mimeType: 'application/pdf',
+          content: mergedPdfBase64
+        });
+      }
+    } catch (err) {
+      logError('Attachment merge failed', err);
+      // Continue with just the summary PDF
+    }
+
+    // Base64 encode attachments array (same pattern as lineItems) to prevent Zapier flattening
+    const attachmentsPayload = stringifyLineItems
+      ? btoa(JSON.stringify(attachmentsArray))
+      : attachmentsArray;
+
     // Build payload
     const payload = {
       ...formData,
       varFlowEnvUpload: false,
-      lineItems: lineItemsArray, // Send as array for Zapier child key support
-      summaryPdfAttachment: {
-        filename: getDynamicPdfFilename(),
-        content: pdfBase64
-      }
+      lineItems: lineItemsPayload,
+      attachments: attachmentsPayload
     };
 
-    // Merge attachments into PDF
-    try {
-      const mergedPdfBase64 = await mergeAttachmentsPDF();
-      if (mergedPdfBase64) {
-        payload.attachmentsPdf = {
-          filename: getAttachmentsPdfFilename(),
-          content: mergedPdfBase64
-        };
-      }
-    } catch (err) {
-      logError('Attachment merge failed', err);
-      // Continue without merged attachments
-    }
-
-    // Submit to API
+    // Submit to API (use text/plain to avoid CORS preflight with Zapier)
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/plain'
       },
       body: JSON.stringify(payload)
     });
@@ -288,7 +307,7 @@ export async function handleFormSubmit(event, config) {
         showAlert('Successfully submitted all expense line items.', 'success');
       }
     } else {
-      success = await submitBulk(expenseItems, vehicleData, formData, apiUrl);
+      success = await submitBulk(expenseItems, vehicleData, formData, apiUrl, config);
       if (success) {
         showAlert('Successfully submitted the expense form.', 'success');
       } else {
