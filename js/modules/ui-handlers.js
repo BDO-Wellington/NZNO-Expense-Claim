@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UI Handlers Module
  * Purpose: DOM manipulation, event handling, and user interface updates
  * Author: James McNeil
@@ -32,7 +32,7 @@ export function addOtherExpenseRow() {
   if (!tableBody) return;
   
   const newRow = document.createElement('tr');
-  newRow.innerHTML = '<td><input type="text" class="form-control" name="other_description[]"></td><td><input type="number" class="form-control" name="other_amount[]" step="0.01"></td><td><input type="file" class="form-control-file" name="other_attachment[]" multiple></td><td><button type="button" class="btn btn-danger btn-sm" data-action="remove-row">Remove</button></td>';
+  newRow.innerHTML = '<td><input type="text" class="form-control" name="other_description[]" aria-label="Other expense description"></td><td><input type="number" class="form-control" name="other_amount[]" step="0.01" aria-label="Other expense amount"></td><td><input type="file" class="form-control-file" name="other_attachment[]" multiple aria-label="Other expense attachment"></td><td><button type="button" class="btn btn-danger btn-sm" data-action="remove-row">Remove</button></td>';
   tableBody.appendChild(newRow);
   // Disable scroll wheel on the newly added number input
   const numberInput = newRow.querySelector('input[type="number"]');
@@ -89,7 +89,7 @@ export function showAttachmentError(message) {
   const errorContainer = document.getElementById('attachmentsError');
   if (errorContainer) {
     errorContainer.textContent = message;
-    errorContainer.style.display = 'block';
+    errorContainer.classList.remove('d-none');
   }
 }
 
@@ -100,7 +100,7 @@ export function showAttachmentError(message) {
 export function hideAttachmentError() {
   const errorContainer = document.getElementById('attachmentsError');
   if (errorContainer) {
-    errorContainer.style.display = 'none';
+    errorContainer.classList.add('d-none');
   }
 }
 
