@@ -324,3 +324,6 @@ export async function handleFormSubmit(event, config) {
     showAlert('An unexpected error occurred during submission.', 'danger');
   }
 }
+
+// Export pure functions for testing
+export { buildLineItemsArray, collectVehicleData, collectFormData, submitBulk, submitIndividualItems };

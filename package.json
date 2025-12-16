@@ -1,0 +1,13 @@
+{
+  "name": "nzno-expense-claim",
+  "version": "1.0.0",
+  "description": "NZNO Expense Claim Form Application",
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage"
+  },
+  "author": "James McNeil",
+  "license": "MIT"
+}
