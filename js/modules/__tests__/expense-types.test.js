@@ -40,49 +40,61 @@ describe('constants', () => {
 });
 
 describe('getExpenseByName', () => {
-  test('returns expense object for valid name', () => {
-    const flights = getExpenseByName('Flights');
-    expect(flights).toBeDefined();
-    expect(flights.name).toBe('Flights');
-    expect(flights.accountCode).toBe('480');
+  describe('valid expense names', () => {
+    test.each([
+      { name: 'Flights', expectedCode: '480' },
+      { name: 'Accommodation', expectedCode: '484' },
+      { name: 'Parking', expectedCode: '482' },
+      { name: 'Meals', expectedCode: '484' },
+    ])('returns expense object for $name', ({ name, expectedCode }) => {
+      const expense = getExpenseByName(name);
+      expect(expense).toBeDefined();
+      expect(expense.name).toBe(name);
+      expect(expense.accountCode).toBe(expectedCode);
+    });
   });
 
-  test('returns undefined for invalid name', () => {
-    expect(getExpenseByName('Invalid Type')).toBeUndefined();
-    expect(getExpenseByName('')).toBeUndefined();
-  });
-
-  test('is case sensitive', () => {
-    expect(getExpenseByName('flights')).toBeUndefined();
-    expect(getExpenseByName('FLIGHTS')).toBeUndefined();
+  describe('invalid expense names', () => {
+    test.each([
+      { name: 'Invalid Type', desc: 'non-existent type' },
+      { name: '', desc: 'empty string' },
+      { name: 'flights', desc: 'lowercase (case sensitive)' },
+      { name: 'FLIGHTS', desc: 'uppercase (case sensitive)' },
+    ])('returns undefined for $desc', ({ name }) => {
+      expect(getExpenseByName(name)).toBeUndefined();
+    });
   });
 });
 
 describe('getAccountCode', () => {
-  test('returns correct account code for valid expense', () => {
-    expect(getAccountCode('Flights')).toBe('480');
-    expect(getAccountCode('Accommodation')).toBe('484');
-    expect(getAccountCode('Parking')).toBe('482');
+  describe('valid expense types', () => {
+    test.each([
+      { type: 'Flights', code: '480' },
+      { type: 'Accommodation', code: '484' },
+      { type: 'Parking', code: '482' },
+    ])('$type -> $code', ({ type, code }) => {
+      expect(getAccountCode(type)).toBe(code);
+    });
   });
 
-  test('returns empty string for invalid expense', () => {
-    expect(getAccountCode('Invalid')).toBe('');
-    expect(getAccountCode('')).toBe('');
+  describe('invalid expense types', () => {
+    test.each([
+      { type: 'Invalid', desc: 'non-existent' },
+      { type: '', desc: 'empty string' },
+    ])('returns empty string for $desc', ({ type }) => {
+      expect(getAccountCode(type)).toBe('');
+    });
   });
 });
 
 describe('calculateVehicleAmount', () => {
-  test('calculates correct amount for kilometres', () => {
-    expect(calculateVehicleAmount(100)).toBe(100 * VEHICLE_RATE);
-    expect(calculateVehicleAmount(50)).toBe(50 * VEHICLE_RATE);
-  });
-
-  test('handles zero kilometres', () => {
-    expect(calculateVehicleAmount(0)).toBe(0);
-  });
-
-  test('handles decimal kilometres', () => {
-    expect(calculateVehicleAmount(25.5)).toBe(25.5 * VEHICLE_RATE);
+  test.each([
+    { kms: 100, expected: 100 * VEHICLE_RATE, desc: '100km' },
+    { kms: 50, expected: 50 * VEHICLE_RATE, desc: '50km' },
+    { kms: 0, expected: 0, desc: 'zero km' },
+    { kms: 25.5, expected: 25.5 * VEHICLE_RATE, desc: 'decimal km' },
+  ])('calculates $desc correctly', ({ kms, expected }) => {
+    expect(calculateVehicleAmount(kms)).toBe(expected);
   });
 });
 
@@ -104,15 +116,25 @@ describe('getExpenseTypeNames', () => {
 });
 
 describe('isValidExpenseType', () => {
-  test('returns true for valid expense types', () => {
-    expect(isValidExpenseType('Flights')).toBe(true);
-    expect(isValidExpenseType('Taxi/Uber')).toBe(true);
-    expect(isValidExpenseType('Meals')).toBe(true);
+  describe('valid types', () => {
+    test.each([
+      { type: 'Flights' },
+      { type: 'Taxi/Uber' },
+      { type: 'Meals' },
+      { type: 'Accommodation' },
+    ])('returns true for $type', ({ type }) => {
+      expect(isValidExpenseType(type)).toBe(true);
+    });
   });
 
-  test('returns false for invalid expense types', () => {
-    expect(isValidExpenseType('Invalid')).toBe(false);
-    expect(isValidExpenseType('')).toBe(false);
-    expect(isValidExpenseType('flights')).toBe(false); // case sensitive
+  describe('invalid types', () => {
+    test.each([
+      { type: 'Invalid', desc: 'non-existent' },
+      { type: '', desc: 'empty string' },
+      { type: 'flights', desc: 'lowercase (case sensitive)' },
+      { type: 'MEALS', desc: 'uppercase (case sensitive)' },
+    ])('returns false for $desc: "$type"', ({ type }) => {
+      expect(isValidExpenseType(type)).toBe(false);
+    });
   });
 });

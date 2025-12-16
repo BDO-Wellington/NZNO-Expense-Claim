@@ -11,177 +11,138 @@ import {
 } from '../config-loader.js';
 
 describe('validateConfig', () => {
+  const validConfig = {
+    API_URL: 'https://api.example.com/submit',
+    DEBUG_MODE: 'PRODUCTION',
+    SUBMIT_INDIVIDUAL_LINE_ITEMS: false
+  };
+
   test('accepts valid configuration', () => {
-    const config = {
-      API_URL: 'https://api.example.com/submit',
-      DEBUG_MODE: 'PRODUCTION',
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: false
-    };
-    expect(() => validateConfig(config)).not.toThrow();
+    expect(() => validateConfig({ ...validConfig })).not.toThrow();
   });
 
-  test('throws on missing API_URL', () => {
-    const config = {
-      DEBUG_MODE: 'PRODUCTION',
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: false
-    };
-    expect(() => validateConfig(config)).toThrow('Missing required configuration field: API_URL');
-  });
-
-  test('throws on missing DEBUG_MODE', () => {
-    const config = {
-      API_URL: 'https://api.example.com',
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: false
-    };
-    expect(() => validateConfig(config)).toThrow('Missing required configuration field: DEBUG_MODE');
-  });
-
-  test('throws on missing SUBMIT_INDIVIDUAL_LINE_ITEMS', () => {
-    const config = {
-      API_URL: 'https://api.example.com',
-      DEBUG_MODE: 'PRODUCTION'
-    };
-    expect(() => validateConfig(config)).toThrow('Missing required configuration field: SUBMIT_INDIVIDUAL_LINE_ITEMS');
+  describe('missing required fields', () => {
+    test.each([
+      { field: 'API_URL', config: { DEBUG_MODE: 'PRODUCTION', SUBMIT_INDIVIDUAL_LINE_ITEMS: false } },
+      { field: 'DEBUG_MODE', config: { API_URL: 'https://api.example.com', SUBMIT_INDIVIDUAL_LINE_ITEMS: false } },
+      { field: 'SUBMIT_INDIVIDUAL_LINE_ITEMS', config: { API_URL: 'https://api.example.com', DEBUG_MODE: 'PRODUCTION' } },
+    ])('throws on missing $field', ({ field, config }) => {
+      expect(() => validateConfig(config)).toThrow(`Missing required configuration field: ${field}`);
+    });
   });
 
   test('throws on empty API_URL', () => {
-    const config = {
-      API_URL: '',
-      DEBUG_MODE: 'PRODUCTION',
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: false
-    };
+    const config = { ...validConfig, API_URL: '' };
     expect(() => validateConfig(config)).toThrow('API_URL must be a non-empty string');
   });
 
-  test('throws on invalid DEBUG_MODE', () => {
-    const config = {
-      API_URL: 'https://api.example.com',
-      DEBUG_MODE: 'INVALID',
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: false
-    };
-    expect(() => validateConfig(config)).toThrow('DEBUG_MODE must be either "DEBUG" or "PRODUCTION"');
+  describe('DEBUG_MODE validation', () => {
+    test.each([
+      { mode: 'DEBUG', shouldPass: true },
+      { mode: 'debug', shouldPass: true },
+      { mode: 'PRODUCTION', shouldPass: true },
+      { mode: 'production', shouldPass: true },
+      { mode: 'INVALID', shouldPass: false },
+      { mode: 'test', shouldPass: false },
+    ])('$mode -> $shouldPass', ({ mode, shouldPass }) => {
+      const config = { ...validConfig, DEBUG_MODE: mode };
+      if (shouldPass) {
+        expect(() => validateConfig(config)).not.toThrow();
+      } else {
+        expect(() => validateConfig(config)).toThrow('DEBUG_MODE must be either "DEBUG" or "PRODUCTION"');
+      }
+    });
   });
 
-  test('accepts DEBUG mode (case insensitive)', () => {
-    const config = {
-      API_URL: 'https://api.example.com',
-      DEBUG_MODE: 'debug',
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: false
-    };
-    expect(() => validateConfig(config)).not.toThrow();
-  });
-
-  test('normalizes string boolean for SUBMIT_INDIVIDUAL_LINE_ITEMS', () => {
-    const config = {
-      API_URL: 'https://api.example.com',
-      DEBUG_MODE: 'PRODUCTION',
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: 'true'
-    };
-    validateConfig(config);
-    expect(config.SUBMIT_INDIVIDUAL_LINE_ITEMS).toBe(true);
+  describe('boolean normalization', () => {
+    test.each([
+      { input: 'true', expected: true },
+      { input: 'false', expected: false },
+      { input: true, expected: true },
+      { input: false, expected: false },
+    ])('SUBMIT_INDIVIDUAL_LINE_ITEMS: $input -> $expected', ({ input, expected }) => {
+      const config = { ...validConfig, SUBMIT_INDIVIDUAL_LINE_ITEMS: input };
+      validateConfig(config);
+      expect(config.SUBMIT_INDIVIDUAL_LINE_ITEMS).toBe(expected);
+    });
   });
 
   test('sets default STRINGIFY_LINE_ITEMS_FOR_ZAPIER to true', () => {
-    const config = {
-      API_URL: 'https://api.example.com',
-      DEBUG_MODE: 'PRODUCTION',
-      SUBMIT_INDIVIDUAL_LINE_ITEMS: false
-    };
+    const config = { ...validConfig };
     validateConfig(config);
     expect(config.STRINGIFY_LINE_ITEMS_FOR_ZAPIER).toBe(true);
   });
 });
 
 describe('getConfigValue', () => {
-  test('returns value for existing key', () => {
-    const config = { API_URL: 'https://example.com', DEBUG_MODE: 'DEBUG' };
-    expect(getConfigValue(config, 'API_URL')).toBe('https://example.com');
+  describe('returns value for existing keys', () => {
+    test.each([
+      { config: { API_URL: 'https://example.com' }, key: 'API_URL', expected: 'https://example.com' },
+      { config: { DEBUG_MODE: 'DEBUG' }, key: 'DEBUG_MODE', expected: 'DEBUG' },
+      { config: { count: 42 }, key: 'count', expected: 42 },
+    ])('$key -> $expected', ({ config, key, expected }) => {
+      expect(getConfigValue(config, key)).toBe(expected);
+    });
   });
 
-  test('returns default value for missing key', () => {
-    const config = { API_URL: 'https://example.com' };
-    expect(getConfigValue(config, 'MISSING_KEY', 'default')).toBe('default');
+  describe('returns default for missing/invalid config', () => {
+    test.each([
+      { config: {}, key: 'MISSING', defaultVal: 'default', expected: 'default' },
+      { config: null, key: 'API_URL', defaultVal: 'default', expected: 'default' },
+      { config: 'string', key: 'API_URL', defaultVal: 'default', expected: 'default' },
+      { config: undefined, key: 'API_URL', defaultVal: 'fallback', expected: 'fallback' },
+    ])('returns $expected for $config', ({ config, key, defaultVal, expected }) => {
+      expect(getConfigValue(config, key, defaultVal)).toBe(expected);
+    });
   });
 
   test('returns null as default when no default provided', () => {
-    const config = { API_URL: 'https://example.com' };
-    expect(getConfigValue(config, 'MISSING_KEY')).toBeNull();
+    expect(getConfigValue({}, 'MISSING_KEY')).toBeNull();
   });
 
-  test('returns default for null config', () => {
-    expect(getConfigValue(null, 'API_URL', 'default')).toBe('default');
-  });
-
-  test('returns default for non-object config', () => {
-    expect(getConfigValue('string', 'API_URL', 'default')).toBe('default');
-  });
-
-  test('returns falsy values correctly', () => {
-    const config = { emptyString: '', zero: 0, falseValue: false };
-    expect(getConfigValue(config, 'emptyString', 'default')).toBe('');
-    expect(getConfigValue(config, 'zero', 99)).toBe(0);
-    expect(getConfigValue(config, 'falseValue', true)).toBe(false);
+  describe('returns falsy values correctly', () => {
+    test.each([
+      { key: 'emptyString', value: '', defaultVal: 'default' },
+      { key: 'zero', value: 0, defaultVal: 99 },
+      { key: 'falseValue', value: false, defaultVal: true },
+    ])('$key: $value (not $defaultVal)', ({ key, value, defaultVal }) => {
+      const config = { [key]: value };
+      expect(getConfigValue(config, key, defaultVal)).toBe(value);
+    });
   });
 });
 
 describe('isDebugMode', () => {
-  test('returns true for DEBUG mode', () => {
-    expect(isDebugMode({ DEBUG_MODE: 'DEBUG' })).toBe(true);
-  });
-
-  test('returns true for debug mode (lowercase)', () => {
-    expect(isDebugMode({ DEBUG_MODE: 'debug' })).toBe(true);
-  });
-
-  test('returns false for PRODUCTION mode', () => {
-    expect(isDebugMode({ DEBUG_MODE: 'PRODUCTION' })).toBe(false);
-  });
-
-  test('returns false for missing DEBUG_MODE', () => {
-    expect(isDebugMode({})).toBe(false);
-  });
-
-  test('returns false for null config', () => {
-    expect(isDebugMode(null)).toBe(false);
+  test.each([
+    { config: { DEBUG_MODE: 'DEBUG' }, expected: true, desc: 'DEBUG uppercase' },
+    { config: { DEBUG_MODE: 'debug' }, expected: true, desc: 'debug lowercase' },
+    { config: { DEBUG_MODE: 'PRODUCTION' }, expected: false, desc: 'PRODUCTION mode' },
+    { config: {}, expected: false, desc: 'missing DEBUG_MODE' },
+    { config: null, expected: false, desc: 'null config' },
+  ])('returns $expected for $desc', ({ config, expected }) => {
+    expect(isDebugMode(config)).toBe(expected);
   });
 });
 
 describe('shouldSubmitIndividually', () => {
-  test('returns true when enabled', () => {
-    expect(shouldSubmitIndividually({ SUBMIT_INDIVIDUAL_LINE_ITEMS: true })).toBe(true);
-  });
-
-  test('returns false when disabled', () => {
-    expect(shouldSubmitIndividually({ SUBMIT_INDIVIDUAL_LINE_ITEMS: false })).toBe(false);
-  });
-
-  test('handles string true', () => {
-    expect(shouldSubmitIndividually({ SUBMIT_INDIVIDUAL_LINE_ITEMS: 'true' })).toBe(true);
-  });
-
-  test('returns false for missing config', () => {
-    expect(shouldSubmitIndividually({})).toBe(false);
-  });
-
-  test('returns false for null config', () => {
-    expect(shouldSubmitIndividually(null)).toBe(false);
+  test.each([
+    { config: { SUBMIT_INDIVIDUAL_LINE_ITEMS: true }, expected: true, desc: 'boolean true' },
+    { config: { SUBMIT_INDIVIDUAL_LINE_ITEMS: false }, expected: false, desc: 'boolean false' },
+    { config: { SUBMIT_INDIVIDUAL_LINE_ITEMS: 'true' }, expected: true, desc: 'string true' },
+    { config: {}, expected: false, desc: 'missing field' },
+    { config: null, expected: false, desc: 'null config' },
+  ])('returns $expected for $desc', ({ config, expected }) => {
+    expect(shouldSubmitIndividually(config)).toBe(expected);
   });
 });
 
 describe('shouldStringifyLineItems', () => {
-  test('returns true when enabled', () => {
-    expect(shouldStringifyLineItems({ STRINGIFY_LINE_ITEMS_FOR_ZAPIER: true })).toBe(true);
-  });
-
-  test('returns false when disabled', () => {
-    expect(shouldStringifyLineItems({ STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false })).toBe(false);
-  });
-
-  test('returns true as default when missing', () => {
-    expect(shouldStringifyLineItems({})).toBe(true);
-  });
-
-  test('returns true for null config', () => {
-    expect(shouldStringifyLineItems(null)).toBe(true);
+  test.each([
+    { config: { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: true }, expected: true, desc: 'enabled' },
+    { config: { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false }, expected: false, desc: 'disabled' },
+    { config: {}, expected: true, desc: 'missing (defaults true)' },
+    { config: null, expected: true, desc: 'null config (defaults true)' },
+  ])('returns $expected when $desc', ({ config, expected }) => {
+    expect(shouldStringifyLineItems(config)).toBe(expected);
   });
 });

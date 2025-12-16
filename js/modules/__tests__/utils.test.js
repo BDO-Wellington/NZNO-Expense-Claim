@@ -26,59 +26,65 @@ describe('formatDate', () => {
 });
 
 describe('sanitizeFilename', () => {
-  test('replaces spaces with underscores', () => {
-    expect(sanitizeFilename('my file name')).toBe('my_file_name');
-  });
-
-  test('replaces special characters with underscores', () => {
-    expect(sanitizeFilename('file@name#123!')).toBe('file_name_123_');
-  });
-
-  test('keeps alphanumeric characters', () => {
-    expect(sanitizeFilename('ValidFilename123')).toBe('ValidFilename123');
-  });
-
-  test('handles empty string', () => {
-    expect(sanitizeFilename('')).toBe('');
+  test.each([
+    { input: 'my file name', expected: 'my_file_name', desc: 'replaces spaces with underscores' },
+    { input: 'file@name#123!', expected: 'file_name_123_', desc: 'replaces special characters' },
+    { input: 'ValidFilename123', expected: 'ValidFilename123', desc: 'keeps alphanumeric characters' },
+    { input: '', expected: '', desc: 'handles empty string' },
+  ])('$desc: "$input" -> "$expected"', ({ input, expected }) => {
+    expect(sanitizeFilename(input)).toBe(expected);
   });
 });
 
 describe('isValidEmail', () => {
-  test('accepts valid email addresses', () => {
-    expect(isValidEmail('test@example.com')).toBe(true);
-    expect(isValidEmail('user.name@domain.co.nz')).toBe(true);
-    expect(isValidEmail('user+tag@example.org')).toBe(true);
+  describe('valid emails', () => {
+    test.each([
+      { email: 'test@example.com', desc: 'standard email' },
+      { email: 'user.name@domain.co.nz', desc: 'email with dots and country TLD' },
+      { email: 'user+tag@example.org', desc: 'email with plus tag' },
+      { email: 'firstname.lastname@company.com', desc: 'professional email format' },
+    ])('accepts $desc: $email', ({ email }) => {
+      expect(isValidEmail(email)).toBe(true);
+    });
   });
 
-  test('rejects invalid email addresses', () => {
-    expect(isValidEmail('invalid')).toBe(false);
-    expect(isValidEmail('missing@domain')).toBe(false);
-    expect(isValidEmail('@nodomain.com')).toBe(false);
-    expect(isValidEmail('spaces in@email.com')).toBe(false);
-    expect(isValidEmail('')).toBe(false);
+  describe('invalid emails', () => {
+    test.each([
+      { email: 'invalid', desc: 'no @ symbol' },
+      { email: 'missing@domain', desc: 'no TLD' },
+      { email: '@nodomain.com', desc: 'no local part' },
+      { email: 'spaces in@email.com', desc: 'contains spaces' },
+      { email: '', desc: 'empty string' },
+      { email: 'double@@at.com', desc: 'double @ symbol' },
+      { email: 'nodot@domaincom', desc: 'missing dot in domain' },
+    ])('rejects $desc: "$email"', ({ email }) => {
+      expect(isValidEmail(email)).toBe(false);
+    });
   });
 });
 
 describe('safeParseFloat', () => {
-  test('parses valid numbers', () => {
-    expect(safeParseFloat('123.45')).toBe(123.45);
-    expect(safeParseFloat('100')).toBe(100);
-    expect(safeParseFloat(42.5)).toBe(42.5);
+  describe('valid numbers', () => {
+    test.each([
+      { input: '123.45', expected: 123.45 },
+      { input: '100', expected: 100 },
+      { input: 42.5, expected: 42.5 },
+      { input: '0', expected: 0 },
+      { input: '-50.5', expected: -50.5 },
+    ])('parses $input to $expected', ({ input, expected }) => {
+      expect(safeParseFloat(input)).toBe(expected);
+    });
   });
 
-  test('returns default value for invalid input', () => {
-    expect(safeParseFloat('not a number')).toBe(0);
-    expect(safeParseFloat('')).toBe(0);
-    expect(safeParseFloat(undefined)).toBe(0);
-  });
-
-  test('uses custom default value', () => {
-    expect(safeParseFloat('invalid', 99)).toBe(99);
-    expect(safeParseFloat(null, -1)).toBe(-1);
-  });
-
-  test('handles edge cases', () => {
-    expect(safeParseFloat('0')).toBe(0);
-    expect(safeParseFloat('-50.5')).toBe(-50.5);
+  describe('invalid inputs with default value', () => {
+    test.each([
+      { input: 'not a number', defaultVal: 0, expected: 0 },
+      { input: '', defaultVal: 0, expected: 0 },
+      { input: undefined, defaultVal: 0, expected: 0 },
+      { input: 'invalid', defaultVal: 99, expected: 99 },
+      { input: null, defaultVal: -1, expected: -1 },
+    ])('returns $expected for "$input" with default $defaultVal', ({ input, defaultVal, expected }) => {
+      expect(safeParseFloat(input, defaultVal)).toBe(expected);
+    });
   });
 });
