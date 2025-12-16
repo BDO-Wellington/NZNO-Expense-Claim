@@ -26,11 +26,12 @@ NZNO-Expense-Claim/
  .nojekyll                   # Prevents Jekyll processing
  LICENSE                     # License file
  README.md                   # This file
- MODULARIZATION.md           # Modularization documentation
  start-server.bat            # Windows server startup script
  start-server.sh             # Mac/Linux server startup script
  css/
     styles.css             # All application styles
+ docs/
+    ZAPIER_XERO_INTEGRATION.md  # Zapier + Xero integration guide
  js/
      app.js                 # Main entry point & initialization
      modules/
@@ -208,25 +209,20 @@ Provides reusable helper functions:
 - Error logging
 - Attachment collection
 
-## Recent Improvements
+## Features
 
-### Modularization (October 2025)
--  Refactored from single-file to modular architecture
--  Implemented ES6 modules for better code organization
--  Separated concerns: UI, business logic, PDF generation
--  Improved testability and maintainability
+### Architecture
+- ES6 modular architecture with clean separation of concerns
+- Configuration-driven behavior via `config.json`
 
-### UI Enhancements
--  Disabled scroll wheel on number inputs to prevent accidental changes
--  Improved print-friendly styling
--  Fixed page break issues in PDF generation
--  Enhanced form validation and error messaging
+### UI
+- Disabled scroll wheel on number inputs to prevent accidental changes
+- Print-friendly styling with optimized PDF generation
+- Enhanced form validation and error messaging
 
-### PDF Improvements
--  Optimized page break placement
--  Prevented unwanted breaks after headings
--  Reduced top margins for better layout
--  Added explicit page break control
+### Integrations
+- Zapier webhook support with Xero bill creation
+- See [docs/ZAPIER_XERO_INTEGRATION.md](docs/ZAPIER_XERO_INTEGRATION.md) for setup
 
 ## Development
 
@@ -343,7 +339,7 @@ See [LICENSE](LICENSE) file for details.
 For issues, questions, or contributions:
 - Create an issue on GitHub
 - Contact the development team
-- Refer to [MODULARIZATION.md](MODULARIZATION.md) for architecture details
+- See [docs/ZAPIER_XERO_INTEGRATION.md](docs/ZAPIER_XERO_INTEGRATION.md) for integration setup
 
 ---
 

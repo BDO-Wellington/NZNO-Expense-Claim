@@ -1,0 +1,10 @@
+{
+  "_comment": "Example payload sent to Zapier when STRINGIFY_LINE_ITEMS_FOR_ZAPIER=true",
+  "fullName": "Test Employee",
+  "employeeId": "123456",
+  "expenseDate": "2025-11-18",
+  "varFlowEnvUpload": false,
+  "lineItems": "W3siZGVzY3JpcHRpb24iOiJGbGlnaHRzIiwicXVhbnRpdHkiOjEsImFtb3VudCI6MTAwLCJhY2NvdW50Q29kZSI6IjQ4MCIsInRheFR5cGUiOiIifSx7ImRlc2NyaXB0aW9uIjoiT3RoZXIgRXhwZW5zZXMgLSBDb25mZXJlbmNlIFJlZ2lzdHJhdGlvbiIsInF1YW50aXR5IjoxLCJhbW91bnQiOjI1MCwiYWNjb3VudENvZGUiOiIiLCJ0YXhUeXBlIjoiIn0seyJkZXNjcmlwdGlvbiI6IlByaXZhdGUgVmVoaWNsZSAtIFRyaXAgdG8gV2VsbGluZ3RvbiIsInF1YW50aXR5IjoxLCJhbW91bnQiOjIwOCwiYWNjb3VudENvZGUiOiI0ODEiLCJ0YXhUeXBlIjoiIn1d",
+  "attachments": "W3siZmlsZU5hbWUiOiJFeHBlbnNlX0NsYWltX0Zvcm1fSmFtZXNfTWNOZWlsXzIwMjVfMTFfMTgucGRmIiwibWltZVR5cGUiOiJhcHBsaWNhdGlvbi9wZGYiLCJjb250ZW50IjoiSlZCRVJpMHhMak1LSmJyZnJPQUtNeUF3SUc5aWFnbzguLi4ifSx7ImZpbGVOYW1lIjoiQXR0YWNobWVudHNfSmFtZXNfTWNOZWlsXzIwMjVfMTFfMTgucGRmIiwibWltZVR5cGUiOiJhcHBsaWNhdGlvbi9wZGYiLCJjb250ZW50IjoiSlZCRVJpMHhMak1LSmJyZnJPQUtNeUF3SUc5aWFnbzguLi4ifV0=",
+  "_note": "Both lineItems and attachments are BASE64-ENCODED JSON STRINGS. This prevents Zapier from auto-detecting JSON and flattening it into individual fields. The Code action decodes them using atob()."
+}
