@@ -1,0 +1,168 @@
+/* ========================================
+   Table Components
+   Part of Phase 4: Bootstrap Removal
+   Custom table styling
+   ======================================== */
+
+/* ----------------------------------------
+   Base Table
+   ---------------------------------------- */
+.table {
+  width: 100%;
+  margin-bottom: 1rem;
+  color: var(--nzno-dark);
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--table-cell-padding, 0.75rem);
+  vertical-align: top;
+  border-top: 1px solid var(--table-border-color, var(--nzno-border));
+}
+
+.table thead th {
+  vertical-align: bottom;
+  border-bottom: 2px solid var(--table-border-color, var(--nzno-border));
+  font-weight: 600;
+  text-align: left;
+}
+
+.table tbody + tbody {
+  border-top: 2px solid var(--table-border-color, var(--nzno-border));
+}
+
+/* ----------------------------------------
+   Bordered Table
+   ---------------------------------------- */
+.table-bordered {
+  border: 1px solid var(--table-border-color, var(--nzno-border));
+}
+
+.table-bordered th,
+.table-bordered td {
+  border: 1px solid var(--table-border-color, var(--nzno-border));
+}
+
+.table-bordered thead th,
+.table-bordered thead td {
+  border-bottom-width: 2px;
+}
+
+/* ----------------------------------------
+   Borderless Table
+   ---------------------------------------- */
+.table-borderless th,
+.table-borderless td,
+.table-borderless thead th,
+.table-borderless tbody + tbody {
+  border: 0;
+}
+
+/* ----------------------------------------
+   Striped Table
+   ---------------------------------------- */
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* ----------------------------------------
+   Hoverable Table
+   ---------------------------------------- */
+.table-hover tbody tr:hover {
+  background-color: var(--table-hover-bg, var(--nzno-light));
+}
+
+/* ----------------------------------------
+   Small Table
+   ---------------------------------------- */
+.table-sm th,
+.table-sm td {
+  padding: var(--table-cell-padding-sm, 0.3rem);
+}
+
+/* ----------------------------------------
+   Responsive Table
+   ---------------------------------------- */
+.table-responsive {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive > .table {
+  margin-bottom: 0;
+}
+
+@media (max-width: 575.98px) {
+  .table-responsive-sm {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .table-responsive-md {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ----------------------------------------
+   Table Row States
+   ---------------------------------------- */
+.table-primary {
+  background-color: var(--nzno-purple-light);
+}
+
+.table-success {
+  background-color: rgba(79, 159, 36, 0.15);
+}
+
+.table-danger {
+  background-color: rgba(193, 12, 23, 0.15);
+}
+
+.table-warning {
+  background-color: rgba(245, 166, 35, 0.15);
+}
+
+.table-info {
+  background-color: rgba(47, 151, 213, 0.15);
+}
+
+.table-light {
+  background-color: var(--nzno-light);
+}
+
+/* ----------------------------------------
+   Caption
+   ---------------------------------------- */
+.table caption {
+  padding-top: var(--table-cell-padding, 0.75rem);
+  padding-bottom: var(--table-cell-padding, 0.75rem);
+  color: var(--nzno-gray);
+  text-align: left;
+  caption-side: bottom;
+}
+
+/* ----------------------------------------
+   Table Input Sizing
+   Issue #10: Prevent inputs from overlapping table cells
+   ---------------------------------------- */
+.table td .form-control,
+.table td input[type="number"],
+.table td input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.table td {
+  overflow: hidden;
+}

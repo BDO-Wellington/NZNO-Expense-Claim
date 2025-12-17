@@ -1,0 +1,145 @@
+/* ========================================
+   Modal Dialog Component
+   Part of Phase 2: Confirmation & Validation
+   ======================================== */
+
+/* Modal backdrop */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10002;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  padding: var(--nzno-spacing-md);
+}
+
+.modal-backdrop.modal-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Modal content */
+.modal-content {
+  background-color: var(--nzno-white);
+  border-radius: var(--nzno-radius-lg);
+  box-shadow: var(--nzno-shadow);
+  max-width: 420px;
+  width: 100%;
+  padding: var(--nzno-spacing-lg);
+  transform: scale(0.95) translateY(-10px);
+  transition: transform 0.2s ease;
+  text-align: center;
+}
+
+.modal-visible .modal-content {
+  transform: scale(1) translateY(0);
+}
+
+/* Modal icon */
+.modal-icon {
+  margin-bottom: var(--nzno-spacing-md);
+  display: flex;
+  justify-content: center;
+}
+
+.modal-warning-icon {
+  color: #f5a623;
+  width: 48px;
+  height: 48px;
+}
+
+/* Modal title */
+.modal-title {
+  color: var(--nzno-dark);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 var(--nzno-spacing-sm) 0;
+}
+
+/* Modal message */
+.modal-message {
+  color: var(--nzno-gray);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 var(--nzno-spacing-lg) 0;
+}
+
+/* Modal buttons */
+.modal-buttons {
+  display: flex;
+  gap: var(--nzno-spacing-sm);
+  justify-content: center;
+}
+
+.modal-buttons .btn {
+  min-width: 100px;
+  padding: 10px 20px;
+}
+
+/* Focus styles for accessibility */
+.modal-content:focus {
+  outline: none;
+}
+
+.modal-buttons .btn:focus {
+  outline: 2px solid var(--nzno-purple);
+  outline-offset: 2px;
+}
+
+/* Danger modal styles */
+.modal-backdrop[data-type="danger"] .modal-confirm {
+  background-color: var(--nzno-red);
+  border-color: var(--nzno-red);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .modal-backdrop {
+    padding: var(--nzno-spacing-sm);
+  }
+
+  .modal-content {
+    padding: var(--nzno-spacing-md);
+  }
+
+  .modal-buttons {
+    flex-direction: column-reverse;
+  }
+
+  .modal-buttons .btn {
+    width: 100%;
+  }
+}
+
+/* Accessibility - reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop {
+    transition: opacity 0.1s ease, visibility 0.1s ease;
+  }
+
+  .modal-content {
+    transition: none;
+    transform: none;
+  }
+
+  .modal-visible .modal-content {
+    transform: none;
+  }
+}
+
+/* Print styles - hide modals */
+@media print {
+  .modal-backdrop {
+    display: none !important;
+  }
+}

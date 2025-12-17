@@ -1,0 +1,62 @@
+/* ========================================
+   CSS Variables - Extended
+   Part of Phase 4: Bootstrap Removal
+   Breakpoints and additional variables
+   ======================================== */
+
+:root {
+  /* ----------------------------------------
+     Breakpoints (Bootstrap-compatible)
+     ---------------------------------------- */
+  --breakpoint-xs: 0;
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+
+  /* ----------------------------------------
+     Container Max Widths
+     ---------------------------------------- */
+  --container-sm: 540px;
+  --container-md: 720px;
+  --container-lg: 960px;
+  --container-xl: 1140px;
+
+  /* ----------------------------------------
+     Grid Settings
+     ---------------------------------------- */
+  --grid-columns: 12;
+  --grid-gutter: 30px;
+  --grid-gutter-half: 15px;
+
+  /* ----------------------------------------
+     Form Control Sizing
+     ---------------------------------------- */
+  --input-height: 38px;
+  --input-height-sm: 31px;
+  --input-height-lg: 48px;
+  --input-padding-y: 6px;
+  --input-padding-x: 12px;
+  --input-font-size: 14px;
+
+  /* ----------------------------------------
+     Z-Index Layers
+     ---------------------------------------- */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 10000;
+  --z-progress: 10001;
+
+  /* ----------------------------------------
+     Table Settings
+     ---------------------------------------- */
+  --table-cell-padding: 0.75rem;
+  --table-cell-padding-sm: 0.3rem;
+  --table-border-color: var(--nzno-border);
+  --table-hover-bg: var(--nzno-light);
+}

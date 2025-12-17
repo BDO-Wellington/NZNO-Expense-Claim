@@ -1,0 +1,129 @@
+/* ========================================
+   Progress Overlay Component
+   Part of Phase 1: User Feedback Foundation
+   For PDF generation progress display
+   ======================================== */
+
+/* Progress overlay - full page backdrop */
+.progress-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.progress-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Progress content card */
+.progress-content {
+  background-color: var(--nzno-white);
+  padding: var(--nzno-spacing-lg) calc(var(--nzno-spacing-lg) * 1.5);
+  border-radius: var(--nzno-radius-lg);
+  box-shadow: var(--nzno-shadow);
+  text-align: center;
+  min-width: 280px;
+  max-width: 400px;
+}
+
+/* Progress icon/spinner area */
+.progress-icon {
+  margin-bottom: var(--nzno-spacing-md);
+  display: flex;
+  justify-content: center;
+}
+
+/* Progress title */
+.progress-title {
+  color: var(--nzno-purple);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 var(--nzno-spacing-sm) 0;
+}
+
+/* Progress status text */
+.progress-status {
+  color: var(--nzno-gray);
+  font-size: 14px;
+  margin: 0 0 var(--nzno-spacing-md) 0;
+}
+
+/* Indeterminate progress bar */
+.progress-bar-container {
+  height: 6px;
+  background-color: var(--nzno-light);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-indeterminate {
+  height: 100%;
+  width: 40%;
+  background-color: var(--nzno-purple);
+  border-radius: 3px;
+  position: absolute;
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    left: -40%;
+  }
+  50% {
+    left: 60%;
+  }
+  100% {
+    left: -40%;
+  }
+}
+
+/* Determinate progress bar (for future use) */
+.progress-bar-determinate {
+  height: 100%;
+  background-color: var(--nzno-purple);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+/* Progress percentage text */
+.progress-percentage {
+  color: var(--nzno-dark);
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: var(--nzno-spacing-sm);
+}
+
+/* Accessibility - reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .progress-overlay {
+    transition: none;
+  }
+
+  .progress-bar-indeterminate {
+    animation: none;
+    left: 30%;
+    opacity: 0.7;
+  }
+}
+
+/* Print styles - hide progress overlay */
+@media print {
+  .progress-overlay {
+    display: none !important;
+  }
+}

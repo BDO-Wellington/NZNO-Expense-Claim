@@ -1,0 +1,177 @@
+/* ========================================
+   Form Validation Styles
+   Part of Phase 2: Confirmation & Validation
+   ======================================== */
+
+/* ----------------------------------------
+   Input States
+   ---------------------------------------- */
+
+/* Valid input state */
+.form-control.is-valid {
+  border-color: var(--nzno-green);
+  padding-right: 2.5rem;
+  background-position: right 0.75rem center;
+}
+
+.form-control.is-valid:focus {
+  border-color: var(--nzno-green);
+  box-shadow: 0 0 0 3px rgba(79, 159, 36, 0.2);
+}
+
+/* Invalid input state */
+.form-control.is-invalid {
+  border-color: var(--nzno-red);
+  padding-right: 2.5rem;
+  background-position: right 0.75rem center;
+}
+
+.form-control.is-invalid:focus {
+  border-color: var(--nzno-red);
+  box-shadow: 0 0 0 3px rgba(193, 12, 23, 0.2);
+}
+
+/* ----------------------------------------
+   Validation Indicators
+   ---------------------------------------- */
+.form-group {
+  position: relative;
+}
+
+.validation-valid-indicator,
+.validation-invalid-indicator {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Adjust position when there's a label */
+.form-group label + .form-control ~ .validation-valid-indicator,
+.form-group label + .form-control ~ .validation-invalid-indicator {
+  top: calc(50% + 12px);
+}
+
+.validation-valid-indicator {
+  color: var(--nzno-green);
+}
+
+.validation-invalid-indicator {
+  color: var(--nzno-red);
+}
+
+/* ----------------------------------------
+   Error Messages
+   ---------------------------------------- */
+.validation-error {
+  color: var(--nzno-red);
+  font-size: 13px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: validation-error-slide 0.2s ease;
+}
+
+@keyframes validation-error-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ----------------------------------------
+   Error Summary
+   ---------------------------------------- */
+.validation-summary {
+  background-color: #fce4e4;
+  border: 1px solid var(--nzno-red-light);
+  border-left: 4px solid var(--nzno-red);
+  border-radius: var(--nzno-radius);
+  padding: var(--nzno-spacing-md);
+  margin-bottom: var(--nzno-spacing-lg);
+  animation: validation-summary-fade 0.3s ease;
+}
+
+@keyframes validation-summary-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.validation-summary-title {
+  color: var(--nzno-red);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 var(--nzno-spacing-sm) 0;
+}
+
+.validation-summary-list {
+  margin: 0;
+  padding-left: var(--nzno-spacing-md);
+}
+
+.validation-summary-list li {
+  color: var(--nzno-red);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.validation-summary-list li:last-child {
+  margin-bottom: 0;
+}
+
+.validation-summary-list a {
+  color: var(--nzno-red);
+  text-decoration: underline;
+}
+
+.validation-summary-list a:hover {
+  color: var(--nzno-red-hover);
+}
+
+.validation-summary-list a:focus {
+  outline: 2px solid var(--nzno-red);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------
+   Accessibility
+   ---------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .validation-error,
+  .validation-summary {
+    animation: none;
+  }
+}
+
+/* ----------------------------------------
+   Print Styles
+   ---------------------------------------- */
+@media print {
+  .validation-error,
+  .validation-summary,
+  .validation-valid-indicator,
+  .validation-invalid-indicator {
+    display: none !important;
+  }
+
+  .form-control.is-valid,
+  .form-control.is-invalid {
+    border-color: var(--nzno-border) !important;
+    padding-right: 12px !important;
+  }
+}

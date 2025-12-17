@@ -1,0 +1,125 @@
+/* ========================================
+   Spinner Component - CSS-only Animation
+   Part of Phase 1: User Feedback Foundation
+   ======================================== */
+
+/* Base spinner styles */
+.spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: currentColor;
+  border-top-color: transparent;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+/* Size variants */
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.spinner-md {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+}
+
+.spinner-lg {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+}
+
+/* Color variants */
+.spinner-primary {
+  color: var(--nzno-purple);
+}
+
+.spinner-white {
+  color: var(--nzno-white);
+}
+
+.spinner-light {
+  color: var(--nzno-gray);
+}
+
+/* Animation keyframes */
+@keyframes spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Button spinner - inline with text */
+.btn-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-spinner .spinner {
+  flex-shrink: 0;
+}
+
+/* Centered spinner container */
+.spinner-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--nzno-spacing-md);
+}
+
+/* Full page spinner overlay */
+.spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.spinner-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.spinner-overlay-content {
+  background-color: var(--nzno-white);
+  padding: var(--nzno-spacing-lg);
+  border-radius: var(--nzno-radius-lg);
+  box-shadow: var(--nzno-shadow);
+  text-align: center;
+  max-width: 300px;
+}
+
+.spinner-overlay-content .spinner {
+  margin-bottom: var(--nzno-spacing-md);
+}
+
+.spinner-overlay-text {
+  color: var(--nzno-dark);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Accessibility - reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: currentColor;
+    opacity: 0.7;
+  }
+}

@@ -1,0 +1,193 @@
+/* ========================================
+   Success Animation Component
+   Part of Phase 3: Visual Polish
+   Animated checkmark for form submission success
+   ======================================== */
+
+/* ----------------------------------------
+   Success Overlay
+   ---------------------------------------- */
+.success-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 10003;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.success-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ----------------------------------------
+   Animated Checkmark
+   ---------------------------------------- */
+.success-checkmark {
+  width: 100px;
+  height: 100px;
+  margin-bottom: var(--nzno-spacing-lg);
+}
+
+.success-checkmark svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Circle animation */
+.checkmark-circle {
+  stroke: var(--nzno-green);
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  transform-origin: center;
+  animation: checkmark-circle 0.6s var(--ease-out) forwards;
+}
+
+/* Check animation */
+.checkmark-check {
+  stroke: var(--nzno-green);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: checkmark-draw 0.4s var(--ease-out) 0.3s forwards;
+}
+
+/* ----------------------------------------
+   Success Text
+   ---------------------------------------- */
+.success-title {
+  color: var(--nzno-dark);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 var(--nzno-spacing-sm) 0;
+  text-align: center;
+  animation: fade-in 0.3s ease 0.5s forwards;
+  opacity: 0;
+}
+
+.success-message {
+  color: var(--nzno-gray);
+  font-size: 16px;
+  margin: 0;
+  text-align: center;
+  animation: fade-in 0.3s ease 0.6s forwards;
+  opacity: 0;
+}
+
+/* ----------------------------------------
+   Success Badge (inline)
+   ---------------------------------------- */
+.success-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background-color: rgba(79, 159, 36, 0.1);
+  border-radius: 20px;
+  color: var(--nzno-green);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.success-badge .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ----------------------------------------
+   Confetti Animation (optional)
+   ---------------------------------------- */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10004;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: var(--nzno-purple);
+  animation: confetti-fall 3s ease-out forwards;
+}
+
+.confetti-piece:nth-child(odd) {
+  background-color: var(--nzno-green);
+}
+
+.confetti-piece:nth-child(3n) {
+  background-color: var(--nzno-blue);
+  border-radius: 50%;
+}
+
+.confetti-piece:nth-child(4n) {
+  background-color: #f5a623;
+  transform: rotate(45deg);
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(-100%) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(720deg);
+  }
+}
+
+/* ----------------------------------------
+   Accessibility
+   ---------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .success-overlay {
+    transition: opacity 0.1s ease, visibility 0.1s ease;
+  }
+
+  .checkmark-circle,
+  .checkmark-check {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .success-title,
+  .success-message {
+    animation: none;
+    opacity: 1;
+  }
+
+  .confetti-piece {
+    animation: none;
+    display: none;
+  }
+}
+
+/* ----------------------------------------
+   Print Styles
+   ---------------------------------------- */
+@media print {
+  .success-overlay,
+  .confetti-container {
+    display: none !important;
+  }
+}

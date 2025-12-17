@@ -170,7 +170,7 @@ label {
    Buttons - NZNO Brand
    ---------------------------------------- */
 
-/* Primary Button - Purple */
+/* Primary Button - Purple with enhanced states */
 .btn-primary {
     background-color: var(--nzno-purple);
     border-color: var(--nzno-purple);
@@ -179,22 +179,25 @@ label {
     padding: 10px 20px;
     border-radius: var(--nzno-radius);
     box-shadow: var(--nzno-shadow);
-    transition: all 0.2s ease;
+    transition: all 0.2s ease, transform 0.15s ease;
+    transform: scale(1);
 }
 
 .btn-primary:hover,
 .btn-primary:focus {
     background-color: var(--nzno-purple-hover);
     border-color: var(--nzno-purple);
-    box-shadow: var(--nzno-shadow), var(--nzno-focus-ring);
+    box-shadow: 0 4px 12px rgba(80, 31, 116, 0.35), var(--nzno-focus-ring);
+    transform: scale(1.02);
 }
 
 .btn-primary:active {
     background-color: var(--nzno-purple) !important;
     border-color: var(--nzno-purple) !important;
+    transform: scale(0.98);
 }
 
-/* Secondary Button - Outline Purple */
+/* Secondary Button - Outline Purple with enhanced states */
 .btn-secondary {
     background-color: var(--nzno-white);
     border: 2px solid var(--nzno-purple);
@@ -202,7 +205,8 @@ label {
     font-weight: 500;
     padding: 8px 18px;
     border-radius: var(--nzno-radius);
-    transition: all 0.2s ease;
+    transition: all 0.2s ease, transform 0.15s ease;
+    transform: scale(1);
 }
 
 .btn-secondary:hover,
@@ -210,15 +214,21 @@ label {
     background-color: var(--nzno-purple);
     border-color: var(--nzno-purple);
     color: var(--nzno-white);
+    transform: scale(1.02);
 }
 
-/* Danger Button - Red */
+.btn-secondary:active {
+    transform: scale(0.98);
+}
+
+/* Danger Button - Red with enhanced states */
 .btn-danger {
     background-color: var(--nzno-white);
     border: 2px solid var(--nzno-red);
     color: var(--nzno-red);
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all 0.2s ease, transform 0.15s ease;
+    transform: scale(1);
 }
 
 .btn-danger:hover,
@@ -226,11 +236,13 @@ label {
     background-color: var(--nzno-red);
     border-color: var(--nzno-red);
     color: var(--nzno-white);
+    transform: scale(1.02);
 }
 
 .btn-danger:active {
     background-color: var(--nzno-red-hover) !important;
     border-color: var(--nzno-red-hover) !important;
+    transform: scale(0.98);
 }
 
 /* Small buttons */
@@ -442,6 +454,55 @@ label {
         margin: 0 !important;
         padding: 0 !important;
     }
+}
+
+/* ----------------------------------------
+   Button Loading States
+   ---------------------------------------- */
+.btn-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.btn-loading .spinner {
+  flex-shrink: 0;
+}
+
+.btn-loading-text {
+  white-space: nowrap;
+}
+
+/* ----------------------------------------
+   Responsive Adjustments
+   ---------------------------------------- */
+/* ----------------------------------------
+   Expense Table - Account Codes
+   ---------------------------------------- */
+.expense-name {
+    font-weight: 500;
+    color: var(--nzno-dark);
+}
+
+.expense-code {
+    font-size: 0.85em;
+    color: var(--nzno-purple);
+    font-weight: 600;
+}
+
+/* Enhanced Input Visibility */
+.form-control,
+.table input[type="number"] {
+    border: 2px solid var(--nzno-border);
+    background-color: var(--nzno-white);
+}
+
+.form-control:not(:placeholder-shown),
+.table input[type="number"]:not(:placeholder-shown) {
+    border-color: var(--nzno-purple-light);
 }
 
 /* ----------------------------------------
