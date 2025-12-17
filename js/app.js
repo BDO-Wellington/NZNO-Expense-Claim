@@ -10,6 +10,7 @@ import { initializeUI, setupEventListeners } from './modules/ui-handlers.js';
 import { handleFormSubmit } from './modules/form-handler.js';
 import { downloadPDF, validatePdfLibraries } from './modules/pdf-generator.js';
 import { logError } from './modules/utils.js';
+import { setupFormValidation } from './modules/validation.js';
 
 /**
  * Application state
@@ -38,7 +39,14 @@ async function initApp() {
     // Initialize UI
     console.log('[ExpenseClaim] Initializing UI...');
     initializeUI(appConfig);
-    
+
+    // Setup form validation
+    console.log('[ExpenseClaim] Setting up form validation...');
+    const form = document.getElementById('expenseForm');
+    if (form) {
+      setupFormValidation(form);
+    }
+
     // Setup event listeners
     console.log('[ExpenseClaim] Setting up event listeners...');
     setupEventListeners({

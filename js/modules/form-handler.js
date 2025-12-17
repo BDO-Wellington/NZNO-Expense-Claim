@@ -7,9 +7,10 @@
 
 import { collectAttachments, logError, safeParseFloat } from './utils.js';
 import { EXPENSE_TYPES, getAccountCode, VEHICLE_ACCOUNT_CODE } from './expense-types.js';
-import { showAlert, setFormToViewMode } from './ui-handlers.js';
+import { showAlert, setFormToViewMode, setButtonLoadingWithText, showProgressOverlay, updateProgressStatus, hideProgressOverlay } from './ui-handlers.js';
 import { generatePDFBase64, mergeAttachmentsPDF, getDynamicPdfFilename, getAttachmentsPdfFilename } from './pdf-generator.js';
 import { shouldSubmitIndividually, shouldStringifyLineItems } from './config-loader.js';
+import { showSuccess, showError, showWarning } from './toast.js';
 
 /**
  * Collects standard expense items from the form.
@@ -206,13 +207,17 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
     // Build line items array
     const lineItemsArray = buildLineItemsArray(expenseItems, vehicleData);
 
+    // Show progress overlay for PDF generation
+    showProgressOverlay('Generating PDF', 'Creating expense claim summary...');
+
     // Generate summary PDF
     let pdfBase64;
     try {
       pdfBase64 = await generatePDFBase64();
     } catch (err) {
       logError('PDF generation failed before form submit', err);
-      showAlert('Failed to generate PDF. Submission aborted.', 'danger');
+      hideProgressOverlay();
+      showError('Failed to generate PDF. Submission aborted.');
       return false;
     }
 
@@ -232,6 +237,7 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
     }];
 
     // Merge attachments into PDF and add to array
+    updateProgressStatus('Merging attachments...');
     try {
       const mergedPdfBase64 = await mergeAttachmentsPDF();
       if (mergedPdfBase64) {
@@ -259,6 +265,9 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
       attachments: attachmentsPayload
     };
 
+    // Update progress and submit to API
+    updateProgressStatus('Submitting to server...');
+
     // Submit to API (use text/plain to avoid CORS preflight with Zapier)
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -268,9 +277,11 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
       body: JSON.stringify(payload)
     });
 
+    hideProgressOverlay();
     return response.ok;
   } catch (error) {
     logError('Bulk submission failed', error);
+    hideProgressOverlay();
     return false;
   }
 }
@@ -283,45 +294,53 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
  */
 export async function handleFormSubmit(event, config) {
   event.preventDefault();
-  
+
   const form = event.target;
   const apiUrl = config.API_URL;
-  
+  const submitButton = form.querySelector('button[type="submit"]');
+
   try {
+    // Show loading state on submit button
+    setButtonLoadingWithText(submitButton, true, 'Submitting...');
+
     // Collect all data
     const formData = collectFormData(form);
     const standardExpenses = await collectStandardExpenses();
     const otherExpenses = await collectOtherExpenses();
     const vehicleData = collectVehicleData(form);
-    
+
     const expenseItems = [...standardExpenses, ...otherExpenses];
-    
+
     // Determine submission mode
     const submitIndividually = shouldSubmitIndividually(config);
-    
+
     let success = false;
-    
+
     if (submitIndividually) {
       success = await submitIndividualItems(expenseItems, formData, apiUrl);
       if (success) {
-        showAlert('Successfully submitted all expense line items.', 'success');
+        showSuccess('Successfully submitted all expense line items.');
       }
     } else {
       success = await submitBulk(expenseItems, vehicleData, formData, apiUrl, config);
       if (success) {
-        showAlert('Successfully submitted the expense form.', 'success');
+        showSuccess('Successfully submitted the expense form.');
       } else {
-        showAlert('Failed to submit the expense form.', 'danger');
+        showError('Failed to submit the expense form. Please try again.');
       }
     }
-    
+
     // Set form to view mode if successful
     if (success) {
       setFormToViewMode(form);
+    } else {
+      // Restore button if submission failed
+      setButtonLoadingWithText(submitButton, false);
     }
   } catch (error) {
     logError('Form submission error', error);
-    showAlert('An unexpected error occurred during submission.', 'danger');
+    showError('An unexpected error occurred during submission.');
+    setButtonLoadingWithText(submitButton, false);
   }
 }
 
