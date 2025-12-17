@@ -4,6 +4,10 @@
   "description": "NZNO Expense Claim Form Application",
   "type": "module",
   "scripts": {
+    "dev": "bun run dev:all",
+    "dev:all": "bun run dev:mock & bun run dev:serve",
+    "dev:serve": "bunx serve -p 5173",
+    "dev:mock": "bun run mock-server.js",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
