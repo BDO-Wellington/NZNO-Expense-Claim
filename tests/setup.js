@@ -108,6 +108,15 @@ globalThis.window = {
 };
 
 // ============================================
+// Animation Frame Mocks
+// ============================================
+globalThis.requestAnimationFrame = mock((callback) => {
+  setTimeout(callback, 0);
+  return 1;
+});
+globalThis.cancelAnimationFrame = mock(() => {});
+
+// ============================================
 // DOM Element Factory
 // ============================================
 export const createMockElement = (overrides = {}) => ({
@@ -146,12 +155,15 @@ globalThis.document = {
   getElementsByClassName: mock(() => []),
   getElementsByTagName: mock(() => []),
   createElement: mock((tagName) => createMockElement({ tagName })),
+  createElementNS: mock((ns, tagName) => createMockElement({ tagName, namespaceURI: ns })),
   createTextNode: mock((text) => ({ textContent: text })),
   body: {
     innerHTML: '',
+    style: { overflow: '' },
     classList: { add: mock(() => {}), remove: mock(() => {}) },
     appendChild: mock(() => {}),
     removeChild: mock(() => {}),
+    contains: mock(() => false),
   },
   head: {
     appendChild: mock(() => {}),
