@@ -10,17 +10,21 @@ import {
 } from '../utils.js';
 
 describe('formatDate', () => {
-  test('formats Date object to YYYY-MM-DD', () => {
-    const date = new Date('2025-03-15T12:00:00');
+  // Tests use NZ timezone (Pacific/Auckland) - UTC+12 in winter, UTC+13 in summer
+  test('formats Date object to YYYY-MM-DD in NZ timezone', () => {
+    // Use a date with explicit NZ time to ensure correct date
+    const date = new Date('2025-03-15T12:00:00+13:00'); // March 15 noon NZDT
     expect(formatDate(date)).toBe('2025-03-15');
   });
 
   test('formats date string to YYYY-MM-DD', () => {
-    expect(formatDate('2025-12-25')).toBe('2025-12-25');
+    // Date-only strings are parsed at midnight local/NZ time
+    expect(formatDate('2025-12-25T00:00:00+13:00')).toBe('2025-12-25');
   });
 
   test('handles single digit month and day', () => {
-    const date = new Date('2025-01-05T12:00:00');
+    // January is NZDT (UTC+13)
+    const date = new Date('2025-01-05T12:00:00+13:00');
     expect(formatDate(date)).toBe('2025-01-05');
   });
 });
