@@ -9,8 +9,16 @@
     "test:coverage": "bun test --coverage",
     "test:ci": "bun test --bail --coverage",
     "test:filter": "bun test -t",
-    "test:flaky": "bun test --rerun-each 3"
+    "test:flaky": "bun test --rerun-each 3",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headed": "playwright test --headed",
+    "e2e:debug": "playwright test --debug",
+    "e2e:report": "playwright show-report"
   },
   "author": "James McNeil",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  }
 }
