@@ -1,0 +1,117 @@
+/* ========================================
+   Alert Components
+   Part of Phase 4: Bootstrap Removal
+   Custom alert styling
+   ======================================== */
+
+/* ----------------------------------------
+   Base Alert
+   ---------------------------------------- */
+.alert {
+  position: relative;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--nzno-radius);
+}
+
+/* ----------------------------------------
+   Alert Variants
+   ---------------------------------------- */
+.alert-primary {
+  color: var(--nzno-purple);
+  background-color: var(--nzno-purple-light);
+  border-color: rgba(80, 31, 116, 0.3);
+}
+
+.alert-secondary {
+  color: var(--nzno-gray);
+  background-color: var(--nzno-light);
+  border-color: var(--nzno-border);
+}
+
+.alert-success {
+  color: var(--nzno-green);
+  background-color: rgba(79, 159, 36, 0.15);
+  border-color: rgba(79, 159, 36, 0.3);
+}
+
+.alert-danger {
+  color: var(--nzno-red);
+  background-color: rgba(193, 12, 23, 0.1);
+  border-color: rgba(193, 12, 23, 0.3);
+}
+
+.alert-warning {
+  color: #856404;
+  background-color: rgba(245, 166, 35, 0.15);
+  border-color: rgba(245, 166, 35, 0.3);
+}
+
+.alert-info {
+  color: var(--nzno-blue);
+  background-color: rgba(47, 151, 213, 0.15);
+  border-color: rgba(47, 151, 213, 0.3);
+}
+
+.alert-light {
+  color: var(--nzno-dark);
+  background-color: var(--nzno-light);
+  border-color: var(--nzno-border);
+}
+
+.alert-dark {
+  color: var(--nzno-white);
+  background-color: var(--nzno-dark);
+  border-color: var(--nzno-dark);
+}
+
+/* ----------------------------------------
+   Alert Links
+   ---------------------------------------- */
+.alert-link {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.alert-primary .alert-link { color: var(--nzno-purple); }
+.alert-success .alert-link { color: var(--nzno-green); }
+.alert-danger .alert-link { color: var(--nzno-red); }
+.alert-warning .alert-link { color: #533f03; }
+.alert-info .alert-link { color: var(--nzno-blue); }
+
+/* ----------------------------------------
+   Dismissible Alert
+   ---------------------------------------- */
+.alert-dismissible {
+  padding-right: 3rem;
+}
+
+.alert-dismissible .close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.75rem 1.25rem;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.alert-dismissible .close:hover {
+  opacity: 0.75;
+}
+
+/* ----------------------------------------
+   Alert Heading
+   ---------------------------------------- */
+.alert-heading {
+  color: inherit;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}

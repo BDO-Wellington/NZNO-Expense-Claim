@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Utility Functions Module
  * Purpose: Reusable utility functions for the Expense Claim application
  * Author: James McNeil
@@ -54,16 +54,31 @@ export function logError(message, error) {
 }
 
 /**
- * Formats a date object to YYYY-MM-DD string.
+ * The default timezone for the application (New Zealand).
+ * Issue #11: Ensure consistent NZST/NZDT timezone across all environments
+ * @constant {string}
+ */
+export const NZ_TIMEZONE = 'Pacific/Auckland';
+
+/**
+ * Formats a date object to YYYY-MM-DD string in NZ timezone.
  * @param {Date|string} date - Date to format
- * @returns {string} Formatted date string
+ * @returns {string} Formatted date string in YYYY-MM-DD format
  */
 export function formatDate(date) {
   const d = new Date(date);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  // Use Intl.DateTimeFormat with NZ timezone for consistent formatting
+  const formatter = new Intl.DateTimeFormat('en-NZ', {
+    timeZone: NZ_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const parts = formatter.formatToParts(d);
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -76,8 +91,9 @@ export function sanitizeFilename(str) {
 }
 
 /**
- * Gets today's date in YYYY-MM-DD format.
- * @returns {string} Today's date
+ * Gets today's date in YYYY-MM-DD format using NZ timezone.
+ * Issue #11: Uses Pacific/Auckland timezone for consistent dates in Playwright tests
+ * @returns {string} Today's date in NZ timezone
  */
 export function getTodayDate() {
   return formatDate(new Date());

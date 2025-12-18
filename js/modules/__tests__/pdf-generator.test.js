@@ -1,7 +1,7 @@
 /**
  * PDF Generator Module Tests
  */
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 import { createMockElement, resetAllMocks } from '../../../tests/setup.js';
 import {
   getDynamicPdfFilename,
@@ -11,9 +11,19 @@ import {
   validatePdfLibraries,
 } from '../pdf-generator.js';
 
+// Store originals to restore after tests
+const originalGetElementById = globalThis.document.getElementById;
+const originalHtml2pdf = globalThis.html2pdf;
+const originalWindowJspdf = globalThis.window?.jspdf;
+
 describe('getDynamicPdfFilename', () => {
   beforeEach(() => {
     resetAllMocks();
+  });
+
+  afterEach(() => {
+    // Restore original getElementById
+    globalThis.document.getElementById = originalGetElementById;
   });
 
   test('generates filename from form inputs', () => {
@@ -82,6 +92,10 @@ describe('getAttachmentsPdfFilename', () => {
     resetAllMocks();
   });
 
+  afterEach(() => {
+    globalThis.document.getElementById = originalGetElementById;
+  });
+
   test('generates attachments filename from form inputs', () => {
     globalThis.document.getElementById = mock((id) => {
       if (id === 'fullName') return { value: 'Jane Doe' };
@@ -104,6 +118,10 @@ describe('getAttachmentsPdfFilename', () => {
 });
 
 describe('isHtml2PdfAvailable', () => {
+  afterEach(() => {
+    globalThis.html2pdf = originalHtml2pdf;
+  });
+
   test('returns true when html2pdf is defined', () => {
     globalThis.html2pdf = mock(() => {});
 
@@ -111,16 +129,19 @@ describe('isHtml2PdfAvailable', () => {
   });
 
   test('returns false when html2pdf is undefined', () => {
-    const original = globalThis.html2pdf;
     delete globalThis.html2pdf;
 
     expect(isHtml2PdfAvailable()).toBe(false);
-
-    globalThis.html2pdf = original;
   });
 });
 
 describe('isJsPdfAvailable', () => {
+  afterEach(() => {
+    if (originalWindowJspdf) {
+      globalThis.window.jspdf = originalWindowJspdf;
+    }
+  });
+
   test('returns true when jspdf.jsPDF is defined', () => {
     globalThis.window.jspdf = { jsPDF: mock(() => {}) };
 
@@ -128,12 +149,9 @@ describe('isJsPdfAvailable', () => {
   });
 
   test('returns false when jspdf is undefined', () => {
-    const original = globalThis.window.jspdf;
     delete globalThis.window.jspdf;
 
     expect(isJsPdfAvailable()).toBe(false);
-
-    globalThis.window.jspdf = original;
   });
 
   test('returns false when jsPDF is missing from jspdf', () => {
@@ -144,6 +162,13 @@ describe('isJsPdfAvailable', () => {
 });
 
 describe('validatePdfLibraries', () => {
+  afterEach(() => {
+    globalThis.html2pdf = originalHtml2pdf;
+    if (originalWindowJspdf) {
+      globalThis.window.jspdf = originalWindowJspdf;
+    }
+  });
+
   test('does not throw when both libraries available', () => {
     globalThis.html2pdf = mock(() => {});
     globalThis.window.jspdf = { jsPDF: mock(() => {}) };
@@ -152,22 +177,16 @@ describe('validatePdfLibraries', () => {
   });
 
   test('throws when html2pdf is missing', () => {
-    const original = globalThis.html2pdf;
     delete globalThis.html2pdf;
     globalThis.window.jspdf = { jsPDF: mock(() => {}) };
 
     expect(() => validatePdfLibraries()).toThrow('html2pdf library is not loaded');
-
-    globalThis.html2pdf = original;
   });
 
   test('throws when jsPDF is missing', () => {
     globalThis.html2pdf = mock(() => {});
-    const original = globalThis.window.jspdf;
     delete globalThis.window.jspdf;
 
     expect(() => validatePdfLibraries()).toThrow('jsPDF library is not loaded');
-
-    globalThis.window.jspdf = original;
   });
 });

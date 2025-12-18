@@ -9,6 +9,7 @@ NZNO Expense Claim Form is a web-based expense claim submission system for the N
 - **Frontend**: Vanilla JavaScript (ES6 modules), Bootstrap 4
 - **PDF Generation**: html2pdf, jsPDF, html2canvas (CDN)
 - **Testing**: Bun test runner (Jest-compatible)
+- **Dev Server**: Bun serve (static file server)
 - **Deployment**: GitHub Pages via GitHub Actions
 - **Config**: JSON-based (`config.json`, gitignored)
 
@@ -22,7 +23,7 @@ bun test:coverage          # Generate coverage report
 bun test:ci                # CI mode (bail on first failure)
 
 # Development server
-python -m http.server 8000  # Or use start-server.sh / start-server.bat
+bun run dev                 # Static server + mock API at http://localhost:5173
 ```
 
 ## Project Structure

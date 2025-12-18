@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PDF Generator Module
  * Purpose: Generate PDFs from forms and merge attachments
  * Author: James McNeil

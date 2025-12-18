@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UI Handlers Module
  * Purpose: DOM manipulation, event handling, and user interface updates
  * Author: James McNeil
@@ -7,6 +7,7 @@
 
 import { calculateVehicleAmount, EXPENSE_TYPES } from './expense-types.js';
 import { formatDate, getTodayDate } from './utils.js';
+import { showDeleteConfirm } from './modal.js';
 
 /**
  * Generates the standard expenses table rows dynamically.
@@ -16,39 +17,156 @@ import { formatDate, getTodayDate } from './utils.js';
 export function generateExpenseTable(expenseTypes) {
   const tableBody = document.querySelector('#StandardExpensesTable tbody');
   if (!tableBody) return;
-  
-  tableBody.innerHTML = expenseTypes.map(type => {
+
+  // Clear existing rows safely
+  tableBody.textContent = '';
+
+  expenseTypes.forEach(type => {
     const fieldName = type.name.toLowerCase().replace(/\s+/g, '');
-    return `<tr><td>${type.name}</td><td><input type="number" class="form-control" name="${fieldName}Amount" step="0.01"></td><td><input type="file" class="form-control-file" name="${fieldName}Attachments" multiple></td></tr>`;
-  }).join('');
+
+    // Create row
+    const row = document.createElement('tr');
+
+    // Description cell with name and account code
+    const descCell = document.createElement('td');
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'expense-name';
+    nameSpan.textContent = type.name;
+    const codeSpan = document.createElement('span');
+    codeSpan.className = 'expense-code';
+    codeSpan.textContent = ` (${type.accountCode})`;
+    descCell.appendChild(nameSpan);
+    descCell.appendChild(codeSpan);
+
+    // Amount cell
+    const amountCell = document.createElement('td');
+    const amountInput = document.createElement('input');
+    amountInput.type = 'number';
+    amountInput.className = 'form-control';
+    amountInput.name = `${fieldName}Amount`;
+    amountInput.step = '0.01';
+    amountInput.placeholder = '0.00';
+    amountInput.setAttribute('aria-label', `${type.name} amount`);
+    amountCell.appendChild(amountInput);
+
+    // Attachment cell
+    const attachCell = document.createElement('td');
+    const attachInput = document.createElement('input');
+    attachInput.type = 'file';
+    attachInput.className = 'form-control-file';
+    attachInput.name = `${fieldName}Attachments`;
+    attachInput.multiple = true;
+    attachInput.setAttribute('aria-label', `${type.name} attachment`);
+    attachCell.appendChild(attachInput);
+
+    row.appendChild(descCell);
+    row.appendChild(amountCell);
+    row.appendChild(attachCell);
+    tableBody.appendChild(row);
+
+    // Disable scroll wheel on number input
+    disableScrollOnInput(amountInput);
+  });
 }
 
 /**
- * Adds a new row to the Other Expenses table.
+ * Adds a new row to the Other Expenses table with animation.
  * @returns {void}
  */
 export function addOtherExpenseRow() {
   const tableBody = document.getElementById('otherExpensesBody');
   if (!tableBody) return;
-  
+
   const newRow = document.createElement('tr');
-  newRow.innerHTML = '<td><input type="text" class="form-control" name="other_description[]"></td><td><input type="number" class="form-control" name="other_amount[]" step="0.01"></td><td><input type="file" class="form-control-file" name="other_attachment[]" multiple></td><td><button type="button" class="btn btn-danger btn-sm" data-action="remove-row">Remove</button></td>';
+  newRow.classList.add('row-entering');
+
+  // Create cells using DOM methods for security
+  const descCell = document.createElement('td');
+  const descInput = document.createElement('input');
+  descInput.type = 'text';
+  descInput.className = 'form-control';
+  descInput.name = 'other_description[]';
+  descInput.setAttribute('aria-label', 'Other expense description');
+  descCell.appendChild(descInput);
+
+  const amountCell = document.createElement('td');
+  const amountInput = document.createElement('input');
+  amountInput.type = 'number';
+  amountInput.className = 'form-control';
+  amountInput.name = 'other_amount[]';
+  amountInput.step = '0.01';
+  amountInput.setAttribute('aria-label', 'Other expense amount');
+  amountCell.appendChild(amountInput);
+
+  const attachCell = document.createElement('td');
+  const attachInput = document.createElement('input');
+  attachInput.type = 'file';
+  attachInput.className = 'form-control-file';
+  attachInput.name = 'other_attachment[]';
+  attachInput.multiple = true;
+  attachInput.setAttribute('aria-label', 'Other expense attachment');
+  attachCell.appendChild(attachInput);
+
+  const actionCell = document.createElement('td');
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn btn-danger btn-sm';
+  removeBtn.setAttribute('data-action', 'remove-row');
+  removeBtn.textContent = 'Remove';
+  actionCell.appendChild(removeBtn);
+
+  newRow.appendChild(descCell);
+  newRow.appendChild(amountCell);
+  newRow.appendChild(attachCell);
+  newRow.appendChild(actionCell);
+
   tableBody.appendChild(newRow);
+
   // Disable scroll wheel on the newly added number input
-  const numberInput = newRow.querySelector('input[type="number"]');
-  if (numberInput) {
-    disableScrollOnInput(numberInput);
-  }
+  disableScrollOnInput(amountInput);
+
+  // Remove animation class after animation completes
+  setTimeout(() => {
+    newRow.classList.remove('row-entering');
+  }, 200);
+
+  // Focus the description input
+  descInput.focus();
 }
 
 /**
- * Removes a row from the Other Expenses table.
+ * Removes a row from the Other Expenses table with confirmation.
  * @param {HTMLElement} button - The remove button element
- * @returns {void}
+ * @returns {Promise<void>}
  */
-export function removeExpenseRow(button) {
+export async function removeExpenseRow(button) {
   const row = button.closest('tr');
-  if (row) row.remove();
+  if (!row) return;
+
+  // Check if row has any data entered
+  const descInput = row.querySelector('input[name="other_description[]"]');
+  const amountInput = row.querySelector('input[name="other_amount[]"]');
+  const fileInput = row.querySelector('input[name="other_attachment[]"]');
+
+  const hasData = (descInput && descInput.value.trim()) ||
+                  (amountInput && amountInput.value) ||
+                  (fileInput && fileInput.files && fileInput.files.length > 0);
+
+  // Only show confirmation if row has data
+  if (hasData) {
+    const confirmed = await showDeleteConfirm('this expense row');
+    if (!confirmed) return;
+  }
+
+  // Animate row removal
+  row.classList.add('row-removing');
+  row.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+  row.style.opacity = '0';
+  row.style.transform = 'translateX(20px)';
+
+  setTimeout(() => {
+    row.remove();
+  }, 200);
 }
 
 /**
@@ -73,9 +191,18 @@ export function updateVehicleAmount(kilometres) {
 export function showAlert(message, type = 'info') {
   const alertContainer = document.getElementById('alert-container');
   if (alertContainer) {
-    alertContainer.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
+    // Clear existing content safely
+    alertContainer.textContent = '';
+
+    // Create alert element using safe DOM methods (prevents XSS)
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.setAttribute('role', 'alert');
+    alertDiv.textContent = message;
+    alertContainer.appendChild(alertDiv);
+
     if (type === 'success') {
-      setTimeout(() => { alertContainer.innerHTML = ''; }, 5000);
+      setTimeout(() => { alertContainer.textContent = ''; }, 5000);
     }
   }
 }
@@ -89,7 +216,7 @@ export function showAttachmentError(message) {
   const errorContainer = document.getElementById('attachmentsError');
   if (errorContainer) {
     errorContainer.textContent = message;
-    errorContainer.style.display = 'block';
+    errorContainer.classList.remove('d-none');
   }
 }
 
@@ -100,7 +227,7 @@ export function showAttachmentError(message) {
 export function hideAttachmentError() {
   const errorContainer = document.getElementById('attachmentsError');
   if (errorContainer) {
-    errorContainer.style.display = 'none';
+    errorContainer.classList.add('d-none');
   }
 }
 
@@ -268,5 +395,215 @@ export function initializeUI(config) {
   disableScrollOnNumberInputs();
   if (config && config.DEBUG_MODE && config.DEBUG_MODE.toUpperCase() === 'DEBUG') {
     hidePdfButton();
+  }
+}
+
+// ============================================
+// Phase 1: Button Loading States
+// ============================================
+
+/**
+ * Sets a button to loading state with spinner
+ * @param {HTMLButtonElement} button - The button element
+ * @param {boolean} loading - Whether to show loading state
+ * @returns {void}
+ */
+export function setButtonLoading(button, loading) {
+  if (!button) return;
+
+  if (loading) {
+    // Store original text
+    if (!button.dataset.originalText) {
+      button.dataset.originalText = button.textContent;
+    }
+
+    // Disable and set aria-busy
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.classList.add('btn-loading');
+
+    // Create spinner element
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner spinner-sm spinner-white';
+    spinner.setAttribute('aria-hidden', 'true');
+
+    // Create text span
+    const textSpan = document.createElement('span');
+    textSpan.className = 'btn-loading-text';
+    textSpan.textContent = 'Loading...';
+
+    // Clear and add new content
+    button.textContent = '';
+    button.appendChild(spinner);
+    button.appendChild(textSpan);
+  } else {
+    // Restore original state
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    button.classList.remove('btn-loading');
+
+    // Restore original text
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
+  }
+}
+
+/**
+ * Sets a button to loading state with custom text
+ * @param {HTMLButtonElement} button - The button element
+ * @param {boolean} loading - Whether to show loading state
+ * @param {string} loadingText - Custom loading text
+ * @returns {void}
+ */
+export function setButtonLoadingWithText(button, loading, loadingText = 'Loading...') {
+  if (!button) return;
+
+  if (loading) {
+    // Store original text
+    if (!button.dataset.originalText) {
+      button.dataset.originalText = button.textContent;
+    }
+
+    // Disable and set aria-busy
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.classList.add('btn-loading');
+
+    // Create spinner element
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner spinner-sm spinner-white';
+    spinner.setAttribute('aria-hidden', 'true');
+
+    // Create text span
+    const textSpan = document.createElement('span');
+    textSpan.className = 'btn-loading-text';
+    textSpan.textContent = loadingText;
+
+    // Clear and add new content
+    button.textContent = '';
+    button.appendChild(spinner);
+    button.appendChild(textSpan);
+  } else {
+    setButtonLoading(button, false);
+  }
+}
+
+// ============================================
+// Phase 1: Progress Overlay
+// ============================================
+
+/** @type {HTMLElement|null} */
+let progressOverlay = null;
+
+/**
+ * Creates the progress overlay element
+ * @returns {HTMLElement} The progress overlay element
+ */
+function createProgressOverlay() {
+  const overlay = document.createElement('div');
+  overlay.className = 'progress-overlay';
+  overlay.id = 'progress-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'progress-title');
+
+  const content = document.createElement('div');
+  content.className = 'progress-content';
+
+  // Spinner icon
+  const iconDiv = document.createElement('div');
+  iconDiv.className = 'progress-icon';
+  const spinner = document.createElement('span');
+  spinner.className = 'spinner spinner-lg spinner-primary';
+  spinner.setAttribute('aria-hidden', 'true');
+  iconDiv.appendChild(spinner);
+  content.appendChild(iconDiv);
+
+  // Title
+  const title = document.createElement('h3');
+  title.className = 'progress-title';
+  title.id = 'progress-title';
+  title.textContent = 'Processing';
+  content.appendChild(title);
+
+  // Status text
+  const status = document.createElement('p');
+  status.className = 'progress-status';
+  status.id = 'progress-status';
+  status.textContent = 'Please wait...';
+  content.appendChild(status);
+
+  // Progress bar container
+  const barContainer = document.createElement('div');
+  barContainer.className = 'progress-bar-container';
+  const bar = document.createElement('div');
+  bar.className = 'progress-bar-indeterminate';
+  barContainer.appendChild(bar);
+  content.appendChild(barContainer);
+
+  overlay.appendChild(content);
+  return overlay;
+}
+
+/**
+ * Shows the progress overlay with a message
+ * @param {string} title - The title text
+ * @param {string} status - The status message
+ * @returns {void}
+ */
+export function showProgressOverlay(title = 'Processing', status = 'Please wait...') {
+  if (!progressOverlay) {
+    progressOverlay = createProgressOverlay();
+    document.body.appendChild(progressOverlay);
+  }
+
+  const titleEl = progressOverlay.querySelector('#progress-title');
+  const statusEl = progressOverlay.querySelector('#progress-status');
+
+  if (titleEl) titleEl.textContent = title;
+  if (statusEl) statusEl.textContent = status;
+
+  // Trigger reflow for animation
+  progressOverlay.offsetHeight;
+  progressOverlay.classList.add('visible');
+
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Updates the progress overlay status message
+ * @param {string} status - The new status message
+ * @returns {void}
+ */
+export function updateProgressStatus(status) {
+  if (progressOverlay) {
+    const statusEl = progressOverlay.querySelector('#progress-status');
+    if (statusEl) statusEl.textContent = status;
+  }
+}
+
+/**
+ * Hides the progress overlay
+ * @returns {void}
+ */
+export function hideProgressOverlay() {
+  if (progressOverlay) {
+    progressOverlay.classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+}
+
+/**
+ * Removes the progress overlay from DOM
+ * @returns {void}
+ */
+export function destroyProgressOverlay() {
+  if (progressOverlay && progressOverlay.parentNode) {
+    progressOverlay.parentNode.removeChild(progressOverlay);
+    progressOverlay = null;
+    document.body.style.overflow = '';
   }
 }

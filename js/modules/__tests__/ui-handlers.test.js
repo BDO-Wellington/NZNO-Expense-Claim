@@ -1,7 +1,7 @@
 /**
  * UI Handlers Module Tests
  */
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 import { createMockElement, createMockForm, resetAllMocks } from '../../../tests/setup.js';
 import {
   showAlert,
@@ -10,12 +10,19 @@ import {
   removeExpenseRow,
 } from '../ui-handlers.js';
 
+// Store originals to restore after tests
+const originalGetElementById = globalThis.document.getElementById;
+
 describe('showAlert', () => {
   beforeEach(() => {
     resetAllMocks();
   });
 
-  test('sets alert container innerHTML with correct message and type', () => {
+  afterEach(() => {
+    globalThis.document.getElementById = originalGetElementById;
+  });
+
+  test('creates alert element with correct message and type', () => {
     const mockContainer = createMockElement();
     globalThis.document.getElementById = mock((id) => {
       if (id === 'alert-container') return mockContainer;
@@ -24,7 +31,11 @@ describe('showAlert', () => {
 
     showAlert('Test message', 'danger');
 
-    expect(mockContainer.innerHTML).toBe('<div class="alert alert-danger" role="alert">Test message</div>');
+    // Check the alert was appended as a child element
+    expect(mockContainer.children.length).toBe(1);
+    const alertDiv = mockContainer.children[0];
+    expect(alertDiv.className).toBe('alert alert-danger');
+    expect(alertDiv.textContent).toBe('Test message');
   });
 
   test('uses info type as default', () => {
@@ -36,7 +47,8 @@ describe('showAlert', () => {
 
     showAlert('Default type message');
 
-    expect(mockContainer.innerHTML).toContain('alert-info');
+    expect(mockContainer.children.length).toBe(1);
+    expect(mockContainer.children[0].className).toContain('alert-info');
   });
 
   test('handles missing alert container gracefully', () => {
@@ -56,7 +68,8 @@ describe('showAlert', () => {
 
     showAlert('Message', type);
 
-    expect(mockContainer.innerHTML).toContain(expected);
+    expect(mockContainer.children.length).toBe(1);
+    expect(mockContainer.children[0].className).toContain(expected);
   });
 });
 
@@ -137,6 +150,10 @@ describe('updateVehicleAmount', () => {
     resetAllMocks();
   });
 
+  afterEach(() => {
+    globalThis.document.getElementById = originalGetElementById;
+  });
+
   test('updates vehicle amount input with calculated value', () => {
     const mockInput = { value: '' };
     globalThis.document.getElementById = mock((id) => {
@@ -175,9 +192,32 @@ describe('updateVehicleAmount', () => {
 });
 
 describe('removeExpenseRow', () => {
-  test('removes parent row when button clicked', () => {
+  beforeEach(() => {
+    resetAllMocks();
+  });
+
+  afterEach(() => {
+    globalThis.document.getElementById = originalGetElementById;
+  });
+
+  test('removes parent row when button clicked', async () => {
     const mockRemove = mock(() => {});
-    const mockRow = { remove: mockRemove };
+    const mockRow = {
+      remove: mockRemove,
+      querySelector: mock(() => null), // No description input, so row can be removed without confirmation
+      classList: {
+        add: mock(() => {}),
+        remove: mock(() => {}),
+      },
+      style: {},
+      offsetHeight: 50,
+      addEventListener: mock((event, handler) => {
+        // Immediately call the transitionend handler to complete removal
+        if (event === 'transitionend') {
+          setTimeout(handler, 0);
+        }
+      }),
+    };
     const mockButton = {
       closest: mock((selector) => {
         if (selector === 'tr') return mockRow;
@@ -185,7 +225,10 @@ describe('removeExpenseRow', () => {
       }),
     };
 
-    removeExpenseRow(mockButton);
+    await removeExpenseRow(mockButton);
+
+    // Wait for setTimeout(200ms) in removeExpenseRow
+    await new Promise(resolve => setTimeout(resolve, 250));
 
     expect(mockRemove).toHaveBeenCalled();
   });

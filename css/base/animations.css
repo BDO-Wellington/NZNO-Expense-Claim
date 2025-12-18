@@ -1,0 +1,273 @@
+/* ========================================
+   Animation System
+   Part of Phase 3: Visual Polish
+   Standardized timing and easing functions
+   ======================================== */
+
+/* ----------------------------------------
+   CSS Custom Properties for Animation
+   ---------------------------------------- */
+:root {
+  /* Animation Timing */
+  --animation-instant: 100ms;
+  --animation-fast: 150ms;
+  --animation-normal: 200ms;
+  --animation-slow: 300ms;
+
+  /* Easing Functions */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ----------------------------------------
+   Fade Animations
+   ---------------------------------------- */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ----------------------------------------
+   Slide Animations
+   ---------------------------------------- */
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+/* ----------------------------------------
+   Scale Animations
+   ---------------------------------------- */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ----------------------------------------
+   Row Animations
+   ---------------------------------------- */
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 100px;
+  }
+}
+
+@keyframes row-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 100px;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+    max-height: 0;
+  }
+}
+
+/* Row animation classes */
+.row-entering {
+  animation: row-enter var(--animation-normal) var(--ease-out) forwards;
+  overflow: hidden;
+}
+
+.row-removing {
+  animation: row-exit var(--animation-normal) var(--ease-in) forwards;
+  overflow: hidden;
+}
+
+/* ----------------------------------------
+   Checkmark Animation (SVG Stroke)
+   ---------------------------------------- */
+@keyframes checkmark-draw {
+  0% {
+    stroke-dashoffset: 50;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes checkmark-circle {
+  0% {
+    stroke-dashoffset: 200;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ----------------------------------------
+   Pulse/Glow Animations
+   ---------------------------------------- */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(80, 31, 116, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(80, 31, 116, 0.5);
+  }
+}
+
+/* ----------------------------------------
+   Shake Animation (for errors)
+   ---------------------------------------- */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+.shake {
+  animation: shake 0.5s var(--ease-in-out);
+}
+
+/* ----------------------------------------
+   Utility Animation Classes
+   ---------------------------------------- */
+.animate-fade-in {
+  animation: fade-in var(--animation-normal) var(--ease-out);
+}
+
+.animate-fade-out {
+  animation: fade-out var(--animation-normal) var(--ease-in);
+}
+
+.animate-slide-down {
+  animation: slide-down var(--animation-normal) var(--ease-out);
+}
+
+.animate-slide-up {
+  animation: slide-up var(--animation-normal) var(--ease-out);
+}
+
+.animate-scale-in {
+  animation: scale-in var(--animation-normal) var(--ease-out);
+}
+
+.animate-pop {
+  animation: pop var(--animation-fast) var(--ease-bounce);
+}
+
+/* ----------------------------------------
+   Accessibility - Reduced Motion
+   ---------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .row-entering,
+  .row-removing {
+    animation: none;
+  }
+}
