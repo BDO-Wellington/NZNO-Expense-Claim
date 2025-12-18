@@ -216,23 +216,15 @@ export async function mergeAttachmentsPDF() {
           console.log(`[ExpenseClaim] Merged PDF: ${file.name} (${pageIndices.length} pages)`);
 
         } else if (file.type.startsWith('image/')) {
-          // Embed image on a new page
-          let image;
-          if (file.type === 'image/png') {
-            image = await mergedPdf.embedPng(arrayBuffer);
-          } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
-            image = await mergedPdf.embedJpg(arrayBuffer);
-          } else {
-            // For other image types, try to convert via canvas
-            const dataUrl = await fileToDataURL(file);
-            const convertedBuffer = await convertImageToJpegBuffer(dataUrl);
-            if (convertedBuffer) {
-              image = await mergedPdf.embedJpg(convertedBuffer);
-            } else {
-              console.warn(`[ExpenseClaim] Unsupported image type: ${file.type}, skipping ${file.name}`);
-              continue;
-            }
+          // Compress and embed image on a new page
+          // All images are compressed to JPEG to reduce payload size for Xero API (3.5MB limit)
+          const dataUrl = await fileToDataURL(file);
+          const compressedBuffer = await compressImageToJpegBuffer(dataUrl);
+          if (!compressedBuffer) {
+            console.warn(`[ExpenseClaim] Failed to compress image: ${file.name}, skipping`);
+            continue;
           }
+          const image = await mergedPdf.embedJpg(compressedBuffer);
 
           // Calculate dimensions to fit on A4 page with margins
           const pageWidth = 595.28; // A4 width in points
@@ -345,27 +337,51 @@ function uint8ArrayToBase64(bytes) {
 }
 
 /**
- * Converts an image (via data URL) to JPEG ArrayBuffer using canvas.
+ * Compresses an image to JPEG with resizing and quality reduction.
+ * This significantly reduces file size for API payload limits (Xero: 3.5MB).
  * @param {string} dataUrl - Image data URL
- * @returns {Promise<ArrayBuffer|null>} JPEG data as ArrayBuffer or null on failure
+ * @param {object} options - Compression options
+ * @param {number} [options.maxDimension=1200] - Max width or height in pixels
+ * @param {number} [options.quality=0.7] - JPEG quality (0-1)
+ * @returns {Promise<ArrayBuffer|null>} Compressed JPEG as ArrayBuffer or null on failure
  */
-function convertImageToJpegBuffer(dataUrl) {
+function compressImageToJpegBuffer(dataUrl, options = {}) {
+  const { maxDimension = 1200, quality = 0.7 } = options;
+
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       try {
+        let { width, height } = img;
+
+        // Resize if larger than maxDimension
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height / width) * maxDimension);
+            width = maxDimension;
+          } else {
+            width = Math.round((width / height) * maxDimension);
+            height = maxDimension;
+          }
+        }
+
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = width;
+        canvas.height = height;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+
+        // Fill with white background (for PNGs with transparency)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob((blob) => {
           if (blob) {
             blob.arrayBuffer().then(resolve).catch(() => resolve(null));
           } else {
             resolve(null);
           }
-        }, 'image/jpeg', 0.92);
+        }, 'image/jpeg', quality);
       } catch {
         resolve(null);
       }
