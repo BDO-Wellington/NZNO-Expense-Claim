@@ -18,29 +18,45 @@ A modern, modular web-based expense claim submission form that supports standard
 ## Project Structure
 
 ```
-NZNO-Expense-Claim/
- index.html                  # Main HTML structure
- config.json                 # Application configuration
- config.template.json        # Configuration template
- 404.html                    # GitHub Pages 404 handler
- .nojekyll                   # Prevents Jekyll processing
- LICENSE                     # License file
- README.md                   # This file
- start-server.bat            # Windows server startup script
- start-server.sh             # Mac/Linux server startup script
- css/
-    styles.css             # All application styles
- docs/
-    ZAPIER_XERO_INTEGRATION.md  # Zapier + Xero integration guide
- js/
-     app.js                 # Main entry point & initialization
-     modules/
-         config-loader.js   # Configuration loading & validation
-         expense-types.js   # Expense type definitions & constants
-         form-handler.js    # Form submission & data collection
-         pdf-generator.js   # PDF generation & merging
-         ui-handlers.js     # DOM manipulation & event handling
-         utils.js           # Utility functions
+expense-claim-app/
+├── index.html                  # Main HTML structure
+├── config.json                 # Application configuration (gitignored)
+├── config.template.json        # Configuration template
+├── package.json                # Project scripts and dependencies
+├── bunfig.toml                 # Bun configuration
+├── playwright.config.js        # Playwright E2E test config
+├── mock-server.js              # Mock API server for development
+├── 404.html                    # GitHub Pages 404 handler
+├── .nojekyll                   # Prevents Jekyll processing
+├── LICENSE                     # License file
+├── README.md                   # This file
+├── CLAUDE.md                   # AI assistant project guide
+├── css/
+│   └── styles.css              # All application styles
+├── docs/
+│   ├── FRONTEND-REDESIGN.md    # Frontend redesign documentation
+│   ├── NZNO-BRANDING.md        # Branding guidelines
+│   ├── TESTING.md              # Comprehensive testing guide
+│   └── ZAPIER_XERO_INTEGRATION.md  # Zapier + Xero integration guide
+├── js/
+│   ├── app.js                  # Main entry point & initialization
+│   └── modules/
+│       ├── config-loader.js    # Configuration loading & validation
+│       ├── expense-types.js    # Expense type definitions & constants
+│       ├── form-handler.js     # Form submission & data collection
+│       ├── icons.js            # SVG icon components
+│       ├── modal.js            # Modal dialog component
+│       ├── pdf-generator.js    # PDF generation & merging
+│       ├── toast.js            # Toast notification system
+│       ├── ui-handlers.js      # DOM manipulation & event handling
+│       ├── utils.js            # Utility functions
+│       ├── validation.js       # Form validation logic
+│       └── __tests__/          # Unit and integration tests
+├── tests/
+│   └── setup.js                # Global test mocks and helpers
+└── e2e/
+    ├── expense-form.spec.js    # E2E functional tests
+    └── visual-regression.spec.js  # Visual regression tests
 ```
 
 ## Quick Start
@@ -65,6 +81,7 @@ Edit `config.json`:
 ```json
 {
   "SUBMIT_INDIVIDUAL_LINE_ITEMS": false,
+  "STRINGIFY_LINE_ITEMS_FOR_ZAPIER": true,
   "API_URL": "https://your-api-endpoint.com/submit",
   "DEBUG_MODE": "PRODUCTION"
 }
@@ -72,6 +89,7 @@ Edit `config.json`:
 
 **Configuration Options:**
 - `SUBMIT_INDIVIDUAL_LINE_ITEMS`: `true` to submit each expense item separately, `false` to submit all as one payload
+- `STRINGIFY_LINE_ITEMS_FOR_ZAPIER`: `true` to JSON-stringify line items (prevents Zapier from flattening arrays), `false` for raw arrays
 - `API_URL`: Your backend API endpoint (Power Automate, Zapier, custom server, etc.)
 - `DEBUG_MODE`: `"DEBUG"` to hide PDF download button, `"PRODUCTION"` for normal operation
 
@@ -86,35 +104,37 @@ Edit `config.json`:
 
 #### Option B: Local Development
 
-You need a local web server (not just opening the HTML file due to ES6 modules):
+You need a local web server (not just opening the HTML file due to ES6 modules).
 
-**Quick Start Scripts (Recommended):**
+**Prerequisites:**
+- [Bun](https://bun.sh/) runtime (recommended)
+- Or Node.js 18+
 
-Windows:
-```cmd
-start-server.bat
-```
+**Quick Start with Bun (Recommended):**
 
-Mac/Linux:
 ```bash
-chmod +x start-server.sh
-./start-server.sh
+# Install dependencies
+bun install
+
+# Start development server with mock API
+bun run dev
 ```
 
-**Manual Start:**
+This starts:
+- Static file server at `http://localhost:5173`
+- Mock API server for testing form submissions
+
+**Alternative Servers:**
 
 ```bash
 # Using Python 3
 python -m http.server 8000
 
 # Using Node.js
-npx http-server -p 8000
-
-# Using PHP
-php -S localhost:8000
+npx serve -p 5173
 ```
 
-Then open `http://localhost:8000/index.html` in your browser.
+Then open `http://localhost:5173` in your browser.
 
 #### Option C: Other Hosting
 
@@ -209,6 +229,33 @@ Provides reusable helper functions:
 - Error logging
 - Attachment collection
 
+#### `validation.js` - Form Validation
+Handles comprehensive form validation:
+- Required field validation
+- Input format validation (dates, numbers)
+- Real-time validation feedback
+- Error message display
+
+#### `toast.js` - Toast Notifications
+Manages user feedback notifications:
+- Success, error, warning, and info toasts
+- Auto-dismiss with configurable duration
+- Stacking multiple notifications
+- Accessible announcements
+
+#### `modal.js` - Modal Dialogs
+Reusable modal dialog component:
+- Confirmation dialogs
+- Custom content modals
+- Keyboard navigation (Escape to close)
+- Focus management
+
+#### `icons.js` - SVG Icons
+Centralized SVG icon management:
+- Inline SVG components
+- Consistent styling
+- Easy icon reuse across modules
+
 ## Features
 
 ### Architecture
@@ -227,26 +274,61 @@ Provides reusable helper functions:
 ## Development
 
 ### Prerequisites
+- [Bun](https://bun.sh/) runtime (for testing and dev server)
 - Modern web browser with ES6 module support
-- Local web server (Python, Node.js, or PHP)
 - Text editor or IDE
 
 ### Testing
-To test the application locally:
 
-1. Start the local server:
-   ```bash
-   python -m http.server 8000
-   ```
+The project uses Bun's built-in test runner (Jest-compatible) for unit and integration tests, and Playwright for E2E tests.
 
-2. Open `http://localhost:8000/index.html` in your browser
+**Unit & Integration Tests:**
 
-3. Test all features:
-   - Form filling and validation
-   - Dynamic row addition/removal
-   - File attachments
-   - PDF generation
-   - Form submission
+```bash
+# Run all tests
+bun test
+
+# Watch mode for development
+bun test:watch
+
+# Run with coverage report
+bun test:coverage
+
+# CI mode (bail on first failure)
+bun test:ci
+
+# Run specific test file
+bun test form-handler.test.js
+
+# Filter tests by name
+bun test:filter "validates required fields"
+```
+
+**E2E Tests (Playwright):**
+
+```bash
+# Run E2E tests
+bun run e2e
+
+# Run with browser visible
+bun run e2e:headed
+
+# Interactive UI mode
+bun run e2e:ui
+
+# Debug mode
+bun run e2e:debug
+
+# View test report
+bun run e2e:report
+```
+
+**Test Structure:**
+- `js/modules/__tests__/` - Unit and integration tests
+- `tests/setup.js` - Global mocks (DOM, fetch, FileReader, etc.)
+- `e2e/` - Playwright E2E and visual regression tests
+
+See [docs/TESTING.md](docs/TESTING.md) for comprehensive testing documentation.
 
 ### Browser Console
 Open developer tools (F12) to view:
@@ -314,11 +396,17 @@ Open developer tools (F12) to view:
 ## Future Enhancements
 
 ### Planned Features
-- [ ] Unit tests with Vitest/Jest
 - [ ] TypeScript conversion
+- [ ] Frontend UI redesign with improved UX
 
-### Might Do
-- [ ] Mobile app wrapper
+### Completed
+- [x] Unit tests with Bun test runner
+- [x] Integration tests
+- [x] E2E tests with Playwright
+- [x] Visual regression testing
+- [x] Form validation module
+- [x] Toast notification system
+- [x] Modal dialog component
 
 ## Contributing
 
@@ -343,7 +431,7 @@ For issues, questions, or contributions:
 
 ---
 
-**Author**: James McNeil  
-**Last Updated**: October 28, 2025  
-**Version**: 2.0 (Modular)  
+**Author**: James McNeil
+**Last Updated**: December 2025
+**Version**: 2.1 (Testing & Validation)
 **Repository**: [BDO-Wellington/NZNO-Expense-Claim](https://github.com/BDO-Wellington/NZNO-Expense-Claim)

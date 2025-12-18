@@ -35,6 +35,7 @@ nul
 .claude/settings.local.json
 .claude/github-workflows/env.json
 .claude/github-workflows/issues.json
+.claude/github-workflows/active-issues.json
 .claude/*.local.md
 
 # Playwright

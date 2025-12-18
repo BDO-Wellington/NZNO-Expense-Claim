@@ -112,12 +112,23 @@ export async function createXeroBill({
 
   // Upload attachments
   for (const attachment of parsedAttachments) {
+    // Decode base64 to binary using Uint8Array (more portable than Buffer in Zapier)
+    const binaryString = atob(attachment.content);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
     const attachmentResponse = await fetchWithZapier(
       `https://api.xero.com/api.xro/2.0/Invoices/${invoiceId}/Attachments/${attachment.fileName}`,
       {
         method: 'PUT',
-        headers: { 'Content-Type': attachment.mimeType, 'xero-tenant-id': tenantId },
-        body: Buffer.from(attachment.content, 'base64')
+        headers: {
+          'Content-Type': attachment.mimeType,
+          'xero-tenant-id': tenantId,
+          'Content-Length': bytes.length.toString()
+        },
+        body: bytes
       }
     );
     await attachmentResponse.throwErrorIfNotOk();
@@ -186,6 +197,7 @@ export async function createXeroBill({
 | "No tenant connections found" | Xero not authenticated | Re-connect Xero in Zapier |
 | Line items not appearing | Config incorrect | Verify `STRINGIFY_LINE_ITEMS_FOR_ZAPIER: true` |
 | Flattened fields in Zapier | Old cached data | Submit new test after config change |
+| Attachments not decoding/corrupted | Buffer not supported in Zapier | Use `Uint8Array` instead of `Buffer.from()` (see code above) |
 | Attachments not uploading | Wrong encoding | Verify Base64 content and `.pdf` extension |
 | Invalid account code | Code not in Xero | Check Xero Chart of Accounts |
 
