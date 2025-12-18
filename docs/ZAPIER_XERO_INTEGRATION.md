@@ -39,6 +39,7 @@ Add action > **Code by Zapier** > **Run JavaScript** (TypeScript)
 
 **Code:**
 ```typescript
+// Define an async function to create a bill (purchase) in Xero with dynamic line items and optional attachments
 export async function createXeroBill({
   supplierName,
   date,
@@ -48,9 +49,9 @@ export async function createXeroBill({
   supplierName: string;
   date: string;
   lineItems: string;
-  attachments?: string;
+  attachments?: string; // Optional attachments parameter
 }): Promise<{ result: string }> {
-  // Decode Base64 and parse line items
+  // Decode Base64 and parse the lineItems string into an array
   const decodedLineItems = atob(lineItems);
   const parsedLineItems = JSON.parse(decodedLineItems) as {
     description: string;
@@ -60,68 +61,103 @@ export async function createXeroBill({
     taxType: string;
   }[];
 
+  // Validate line items exist
   if (!Array.isArray(parsedLineItems) || parsedLineItems.length === 0) {
     throw new Error('No line items found');
   }
 
-  // Parse attachments if provided
-  let parsedAttachments: { fileName: string; mimeType: string; content: string }[] = [];
+  // Parse the attachments if provided
+  let parsedAttachments: {
+    fileName: string;
+    mimeType: string;
+    content: string; // Base64 encoded content
+  }[] = [];
+
   if (attachments) {
-    parsedAttachments = JSON.parse(atob(attachments));
+    const decodedAttachments = atob(attachments);
+    parsedAttachments = JSON.parse(decodedAttachments);
   }
 
-  // Get Xero tenant
-  const connectionsResponse = await fetchWithZapier('https://api.xero.com/Connections', { method: 'GET' });
-  await connectionsResponse.throwErrorIfNotOk();
-  const connections = await connectionsResponse.json();
+  // Base URL for the Xero API
+  const identityBaseUrl = 'https://api.xero.com';
+  const accountingBaseUrl = 'https://api.xero.com/api.xro/2.0';
 
-  if (!connections?.length) throw new Error('No Xero tenant connections found');
+  // Step 1: Retrieve a list of tenant IDs using the connections API
+  const connectionsUrl = `${identityBaseUrl}/Connections`;
+  const connectionsResponse = await fetchWithZapier(connectionsUrl, {
+    method: 'GET',
+  });
+
+  // Check if the response is OK, otherwise throw an error
+  await connectionsResponse.throwErrorIfNotOk();
+
+  // Parse the response to get the list of connections
+  const connections = await connectionsResponse.json();
+  if (!connections || connections.length === 0) {
+    throw new Error('No tenant connections found.');
+  }
+
+  // Use the first tenant ID from the list
   const tenantId = connections[0].tenantId;
 
-  // Create bill
+  // Construct the URL for the Xero API endpoint
+  const url = `${accountingBaseUrl}/Invoices`;
+
+  // Map the line items to the format required by the Xero API
   const formattedLineItems = parsedLineItems.map(item => ({
     Description: item.description,
     Quantity: item.quantity,
     UnitAmount: item.amount,
-    AccountCode: item.accountCode,
-    TaxType: item.taxType || 'NONE',
+    AccountCode: item.accountCode, // Use the provided account code
+    TaxType: item.taxType, // Use the provided tax type
     LineAmount: item.amount * item.quantity
   }));
 
-  const response = await fetchWithZapier('https://api.xero.com/api.xro/2.0/Invoices', {
+  // Define the request body with the bill details
+  const requestBody = {
+    Invoices: [
+      {
+        Type: 'ACCPAY', // Type for a bill (purchase)
+        Contact: {
+          Name: supplierName // Supplier name
+        },
+        Date: date, // Date of the bill
+        LineItems: formattedLineItems,
+        LineAmountTypes: 'Inclusive' // Line amounts are tax inclusive
+      }
+    ]
+  };
+
+  // Make the API request to create the bill
+  const response = await fetchWithZapier(url, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'xero-tenant-id': tenantId
+      'xero-tenant-id': tenantId // Use the retrieved tenant ID
     },
-    body: JSON.stringify({
-      Invoices: [{
-        Type: 'ACCPAY',
-        Contact: { Name: supplierName },
-        Date: date,
-        LineItems: formattedLineItems,
-        LineAmountTypes: 'Inclusive'
-      }]
-    })
+    body: JSON.stringify(requestBody)
   });
 
+  // Throw an error if the response is not OK
   await response.throwErrorIfNotOk();
+
+  // Parse the response to get the created invoice ID
   const responseData = await response.json();
   const invoiceId = responseData.Invoices[0].InvoiceID;
 
-  // Upload attachments
-  for (const attachment of parsedAttachments) {
-    // Decode base64 to binary using Uint8Array (more portable than Buffer in Zapier)
-    const binaryString = atob(attachment.content);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+  // If attachments are provided, upload them
+  if (parsedAttachments.length > 0) {
+    for (const attachment of parsedAttachments) {
+      // Decode base64 to binary using Uint8Array (more portable than Buffer in Zapier)
+      const binaryString = atob(attachment.content);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
 
-    const attachmentResponse = await fetchWithZapier(
-      `https://api.xero.com/api.xro/2.0/Invoices/${invoiceId}/Attachments/${attachment.fileName}`,
-      {
+      const attachmentUrl = `${accountingBaseUrl}/Invoices/${invoiceId}/Attachments/${attachment.fileName}`;
+      const attachmentResponse = await fetchWithZapier(attachmentUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': attachment.mimeType,
@@ -129,12 +165,15 @@ export async function createXeroBill({
           'Content-Length': bytes.length.toString()
         },
         body: bytes
-      }
-    );
-    await attachmentResponse.throwErrorIfNotOk();
+      });
+
+      // Throw an error if the attachment upload response is not OK
+      await attachmentResponse.throwErrorIfNotOk();
+    }
   }
 
-  return { result: 'Bill created successfully' };
+  // Return a success message
+  return { result: 'Bill (purchase) created successfully with attachments' };
 }
 ```
 
