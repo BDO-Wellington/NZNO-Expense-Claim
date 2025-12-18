@@ -1,11 +1,17 @@
 /**
  * Validation Module Tests
- * Tests for form validation functionality
+ * Tests for form validation functionality including DOM feedback
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { resetAllMocks, createMockElement, createMockForm } from '../../../tests/setup.js';
 import {
   validateField,
+  validateAndShowFeedback,
+  clearFieldValidation,
+  validateForm,
+  setupFormValidation,
+  clearFormValidation,
   VALIDATION_RULES
 } from '../validation.js';
 
@@ -288,6 +294,382 @@ describe('Validation Module', () => {
       const dateStr = futureDate.toISOString().split('T')[0];
       const result = customValidator(dateStr);
       expect(result).toBe('Expense date cannot be in the future');
+    });
+
+    test('should return error for invalid date string', () => {
+      const result = customValidator('not-a-date');
+      expect(result).toBe('Please enter a valid date');
+    });
+
+    test('should return error for malformed date', () => {
+      const result = customValidator('2025-99-99');
+      expect(result).toBe('Please enter a valid date');
+    });
+  });
+
+  describe('DOM Feedback - validateAndShowFeedback', () => {
+    let mockInput;
+    let mockContainer;
+
+    beforeEach(() => {
+      resetAllMocks();
+      mockContainer = createMockElement();
+      mockInput = createMockElement({ tagName: 'INPUT' });
+      mockInput.id = 'fullName';
+      mockInput.value = '';
+      mockInput.closest = mock(() => mockContainer);
+      mockContainer.appendChild(mockInput);
+    });
+
+    test('returns false and shows error for invalid input', () => {
+      mockInput.value = '';
+      const result = validateAndShowFeedback(mockInput);
+
+      expect(result).toBe(false);
+      expect(mockInput.classList.contains('is-invalid')).toBe(true);
+      expect(mockInput.getAttribute('aria-invalid')).toBe('true');
+    });
+
+    test('returns true and shows valid state for valid input', () => {
+      mockInput.value = 'John Smith';
+      const result = validateAndShowFeedback(mockInput);
+
+      expect(result).toBe(true);
+      expect(mockInput.classList.contains('is-valid')).toBe(true);
+      expect(mockInput.getAttribute('aria-invalid')).toBe('false');
+    });
+
+    test('returns true and clears validation for empty non-required field', () => {
+      // Use an unknown field (not required)
+      mockInput.id = 'unknownField';
+      mockInput.value = '';
+      const result = validateAndShowFeedback(mockInput);
+
+      expect(result).toBe(true);
+      expect(mockInput.classList.contains('is-invalid')).toBe(false);
+      expect(mockInput.classList.contains('is-valid')).toBe(false);
+    });
+
+    test('creates error element with correct ARIA attributes', () => {
+      mockInput.value = '';
+      validateAndShowFeedback(mockInput);
+
+      const errorEl = mockContainer.querySelector('.validation-error');
+      expect(errorEl).not.toBeNull();
+      expect(errorEl.getAttribute('role')).toBe('alert');
+      expect(errorEl.getAttribute('aria-live')).toBe('polite');
+      expect(errorEl.id).toBe('fullName-error');
+    });
+
+    test('links input to error with aria-describedby', () => {
+      mockInput.value = '';
+      validateAndShowFeedback(mockInput);
+
+      expect(mockInput.getAttribute('aria-describedby')).toBe('fullName-error');
+    });
+
+    test('creates valid indicator for valid input', () => {
+      mockInput.value = 'Valid Name';
+      validateAndShowFeedback(mockInput);
+
+      const indicator = mockContainer.querySelector('.validation-valid-indicator');
+      expect(indicator).not.toBeNull();
+    });
+
+    test('creates invalid indicator for invalid input', () => {
+      mockInput.value = '';
+      validateAndShowFeedback(mockInput);
+
+      const indicator = mockContainer.querySelector('.validation-invalid-indicator');
+      expect(indicator).not.toBeNull();
+    });
+  });
+
+  describe('DOM Feedback - clearFieldValidation', () => {
+    let mockInput;
+    let mockContainer;
+
+    beforeEach(() => {
+      resetAllMocks();
+      mockContainer = createMockElement();
+      mockInput = createMockElement({ tagName: 'INPUT' });
+      mockInput.id = 'fullName';
+      mockInput.closest = mock(() => mockContainer);
+      mockContainer.appendChild(mockInput);
+    });
+
+    test('removes is-valid and is-invalid classes', () => {
+      mockInput.classList.add('is-valid');
+      mockInput.classList.add('is-invalid');
+
+      clearFieldValidation(mockInput);
+
+      expect(mockInput.classList.contains('is-valid')).toBe(false);
+      expect(mockInput.classList.contains('is-invalid')).toBe(false);
+    });
+
+    test('removes aria-invalid attribute', () => {
+      mockInput.setAttribute('aria-invalid', 'true');
+
+      clearFieldValidation(mockInput);
+
+      expect(mockInput.getAttribute('aria-invalid')).toBeNull();
+    });
+
+    test('removes aria-describedby attribute', () => {
+      mockInput.setAttribute('aria-describedby', 'fullName-error');
+
+      clearFieldValidation(mockInput);
+
+      expect(mockInput.getAttribute('aria-describedby')).toBeNull();
+    });
+
+    test('removes error message element', () => {
+      const errorEl = createMockElement();
+      errorEl.className = 'validation-error';
+      mockContainer.appendChild(errorEl);
+
+      clearFieldValidation(mockInput);
+
+      expect(mockContainer.querySelector('.validation-error')).toBeNull();
+    });
+
+    test('removes valid indicator', () => {
+      const indicator = createMockElement();
+      indicator.className = 'validation-valid-indicator';
+      mockContainer.appendChild(indicator);
+
+      clearFieldValidation(mockInput);
+
+      expect(mockContainer.querySelector('.validation-valid-indicator')).toBeNull();
+    });
+
+    test('removes invalid indicator', () => {
+      const indicator = createMockElement();
+      indicator.className = 'validation-invalid-indicator';
+      mockContainer.appendChild(indicator);
+
+      clearFieldValidation(mockInput);
+
+      expect(mockContainer.querySelector('.validation-invalid-indicator')).toBeNull();
+    });
+  });
+
+  describe('DOM Feedback - validateForm', () => {
+    let mockForm;
+
+    beforeEach(() => {
+      resetAllMocks();
+      mockForm = createMockForm({
+        fullName: '',
+        employeeId: '',
+        expenseDate: ''
+      });
+    });
+
+    test('returns false when all required fields are empty', () => {
+      const result = validateForm(mockForm);
+      expect(result).toBe(false);
+    });
+
+    test('returns true when all fields are valid', () => {
+      mockForm.querySelector('#fullName').value = 'John Smith';
+      mockForm.querySelector('#employeeId').value = 'EMP-123';
+      mockForm.querySelector('#expenseDate').value = '2025-01-01';
+
+      const result = validateForm(mockForm);
+      expect(result).toBe(true);
+    });
+
+    test('returns false when any field is invalid', () => {
+      mockForm.querySelector('#fullName').value = 'John Smith';
+      mockForm.querySelector('#employeeId').value = 'EMP-123';
+      mockForm.querySelector('#expenseDate').value = ''; // Empty - invalid
+
+      const result = validateForm(mockForm);
+      expect(result).toBe(false);
+    });
+
+    test('marks invalid fields with is-invalid class', () => {
+      validateForm(mockForm);
+
+      const fullNameInput = mockForm.querySelector('#fullName');
+      const employeeIdInput = mockForm.querySelector('#employeeId');
+      const dateInput = mockForm.querySelector('#expenseDate');
+
+      expect(fullNameInput.classList.contains('is-invalid')).toBe(true);
+      expect(employeeIdInput.classList.contains('is-invalid')).toBe(true);
+      expect(dateInput.classList.contains('is-invalid')).toBe(true);
+    });
+
+    test('marks valid fields with is-valid class', () => {
+      mockForm.querySelector('#fullName').value = 'John Smith';
+      mockForm.querySelector('#employeeId').value = 'EMP-123';
+      mockForm.querySelector('#expenseDate').value = '2025-01-01';
+
+      validateForm(mockForm);
+
+      const fullNameInput = mockForm.querySelector('#fullName');
+      expect(fullNameInput.classList.contains('is-valid')).toBe(true);
+    });
+
+    test('creates error summary when validation fails', () => {
+      validateForm(mockForm);
+
+      const summary = mockForm.querySelector('.validation-summary');
+      expect(summary).not.toBeNull();
+      expect(summary.getAttribute('role')).toBe('alert');
+    });
+
+    test('hides error summary when validation succeeds', () => {
+      mockForm.querySelector('#fullName').value = 'John Smith';
+      mockForm.querySelector('#employeeId').value = 'EMP-123';
+      mockForm.querySelector('#expenseDate').value = '2025-01-01';
+
+      validateForm(mockForm);
+
+      const summary = mockForm.querySelector('.validation-summary');
+      expect(summary).toBeNull();
+    });
+
+    test('focuses first invalid field', () => {
+      const fullNameInput = mockForm.querySelector('#fullName');
+      let wasFocused = false;
+      fullNameInput.focus = mock(() => { wasFocused = true; });
+
+      validateForm(mockForm);
+
+      expect(wasFocused).toBe(true);
+    });
+  });
+
+  describe('DOM Feedback - clearFormValidation', () => {
+    let mockForm;
+
+    beforeEach(() => {
+      resetAllMocks();
+      mockForm = createMockForm({
+        fullName: 'John',
+        employeeId: 'EMP1',
+        expenseDate: '2025-01-01'
+      });
+    });
+
+    test('clears validation state from all fields', () => {
+      // First validate to add states
+      mockForm.querySelector('#fullName').value = '';
+      validateForm(mockForm);
+
+      // Then clear
+      mockForm.querySelector('#fullName').value = 'Valid';
+      clearFormValidation(mockForm);
+
+      const fullNameInput = mockForm.querySelector('#fullName');
+      expect(fullNameInput.classList.contains('is-invalid')).toBe(false);
+      expect(fullNameInput.classList.contains('is-valid')).toBe(false);
+    });
+
+    test('removes error summary', () => {
+      // Add error summary by validating invalid form
+      mockForm.querySelector('#fullName').value = '';
+      validateForm(mockForm);
+
+      const summaryBefore = mockForm.querySelector('.validation-summary');
+      expect(summaryBefore).not.toBeNull();
+
+      // Clear validation
+      clearFormValidation(mockForm);
+
+      const summaryAfter = mockForm.querySelector('.validation-summary');
+      expect(summaryAfter).toBeNull();
+    });
+  });
+
+  describe('DOM Feedback - setupFormValidation', () => {
+    let mockForm;
+
+    beforeEach(() => {
+      resetAllMocks();
+      mockForm = createMockForm({
+        fullName: '',
+        employeeId: '',
+        expenseDate: ''
+      });
+    });
+
+    test('attaches blur event listeners to form fields', () => {
+      setupFormValidation(mockForm);
+
+      const fullNameInput = mockForm.querySelector('#fullName');
+      const blurListeners = fullNameInput._eventListeners?.blur || [];
+      expect(blurListeners.length).toBeGreaterThan(0);
+    });
+
+    test('attaches input event listeners to form fields', () => {
+      setupFormValidation(mockForm);
+
+      const fullNameInput = mockForm.querySelector('#fullName');
+      const inputListeners = fullNameInput._eventListeners?.input || [];
+      expect(inputListeners.length).toBeGreaterThan(0);
+    });
+
+    test('attaches submit event listener to form', () => {
+      setupFormValidation(mockForm);
+
+      const submitListeners = mockForm._eventListeners?.submit || [];
+      expect(submitListeners.length).toBeGreaterThan(0);
+    });
+
+    test('validates field on blur', () => {
+      setupFormValidation(mockForm);
+
+      const fullNameInput = mockForm.querySelector('#fullName');
+      fullNameInput.value = '';
+
+      // Trigger blur event
+      const blurHandler = fullNameInput._eventListeners?.blur?.[0];
+      if (blurHandler) blurHandler();
+
+      expect(fullNameInput.classList.contains('is-invalid')).toBe(true);
+    });
+
+    test('clears error on input when field was invalid', () => {
+      setupFormValidation(mockForm);
+
+      const fullNameInput = mockForm.querySelector('#fullName');
+      fullNameInput.value = '';
+
+      // First trigger blur to show error
+      const blurHandler = fullNameInput._eventListeners?.blur?.[0];
+      if (blurHandler) blurHandler();
+
+      expect(fullNameInput.classList.contains('is-invalid')).toBe(true);
+
+      // Now trigger input to clear error
+      const inputHandler = fullNameInput._eventListeners?.input?.[0];
+      if (inputHandler) inputHandler();
+
+      expect(fullNameInput.classList.contains('is-invalid')).toBe(false);
+    });
+
+    test('validateForm prevents submission when fields are invalid', () => {
+      // Validate form directly - this is what the submit handler calls
+      const isValid = validateForm(mockForm);
+
+      // Form with empty required fields should be invalid
+      expect(isValid).toBe(false);
+    });
+
+    test('validateForm allows submission when all fields are valid', () => {
+      mockForm.querySelector('#fullName').value = 'John Smith';
+      mockForm.querySelector('#employeeId').value = 'EMP-123';
+      mockForm.querySelector('#expenseDate').value = '2025-01-01';
+
+      // Validate form directly - this is what the submit handler calls
+      const isValid = validateForm(mockForm);
+
+      // Form with valid fields should be valid
+      expect(isValid).toBe(true);
     });
   });
 });
