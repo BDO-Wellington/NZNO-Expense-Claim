@@ -26,7 +26,7 @@ describe('submitBulk', () => {
     resetAllMocks();
   });
 
-  test('returns true on successful submission', async () => {
+  test('returns success object on successful submission', async () => {
     expect.assertions(1);
 
     const expenseItems = [];
@@ -35,11 +35,11 @@ describe('submitBulk', () => {
 
     const result = await submitBulk(expenseItems, vehicleData, formData, 'https://api.test.com', { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false });
 
-    expect(result).toBe(true);
+    expect(result.success).toBe(true);
   });
 
-  test('returns false when fetch fails', async () => {
-    expect.assertions(1);
+  test('returns failure object with server errorType when fetch fails', async () => {
+    expect.assertions(2);
 
     setFetchResponse(() => MockResponses.failure(400));
 
@@ -51,11 +51,12 @@ describe('submitBulk', () => {
       { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false }
     );
 
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
+    expect(result.errorType).toBe('server');
   });
 
-  test('returns false on network error', async () => {
-    expect.assertions(1);
+  test('returns failure object with errorType on network error', async () => {
+    expect.assertions(2);
 
     setFetchResponse(() => MockResponses.networkError('Connection refused'));
 
@@ -67,7 +68,8 @@ describe('submitBulk', () => {
       { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false }
     );
 
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
+    expect(result.errorType).toBeDefined();
   });
 
   test('sends POST request with correct URL', async () => {
@@ -101,7 +103,7 @@ describe('submitBulk', () => {
     expect(typeof payload.lineItems).toBe('string');
   });
 
-  test('returns false when PDF generation fails', async () => {
+  test('returns failure object when PDF generation fails', async () => {
     expect.assertions(1);
 
     // Mock html2pdf to throw an error
@@ -120,7 +122,7 @@ describe('submitBulk', () => {
       { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false }
     );
 
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
 
     // Restore original mock
     globalThis.html2pdf = originalHtml2pdf;

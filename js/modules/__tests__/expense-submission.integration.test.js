@@ -252,7 +252,7 @@ describe('Expense Submission Integration', () => {
           { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: true }
         );
 
-        expect(result).toBe(true);
+        expect(result.success).toBe(true);
 
         const payload = getFetchBody();
         // Decode the base64 lineItems
@@ -289,7 +289,7 @@ describe('Expense Submission Integration', () => {
         { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: true }
       );
 
-      expect(result).toBe(true);
+      expect(result.success).toBe(true);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
       const payload = getFetchBody();
@@ -343,7 +343,7 @@ describe('Expense Submission Integration', () => {
         { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: true }
       );
 
-      expect(result).toBe(true);
+      expect(result.success).toBe(true);
 
       // Verify payload contains attachments
       const payload = getFetchBody();
@@ -373,7 +373,7 @@ describe('Expense Submission Integration', () => {
         { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false }
       );
 
-      expect(result).toBe(true);
+      expect(result.success).toBe(true);
 
       const errors = stopErrorCapture();
       // Should not have critical errors for missing optional attachments
@@ -400,7 +400,7 @@ describe('Expense Submission Integration', () => {
         { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: false }
       );
 
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
     });
 
     test('handles network timeout gracefully', async () => {
@@ -418,7 +418,7 @@ describe('Expense Submission Integration', () => {
         { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: true }
       );
 
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
 
       const errors = stopErrorCapture();
       // Should have logged the error
@@ -477,7 +477,7 @@ describe('Expense Submission Integration', () => {
         { STRINGIFY_LINE_ITEMS_FOR_ZAPIER: true }
       );
 
-      expect(result).toBe(true);
+      expect(result.success).toBe(true);
 
       const payload = getFetchBody();
 

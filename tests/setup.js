@@ -48,6 +48,14 @@ globalThis.btoa = (str) => Buffer.from(str).toString('base64');
 globalThis.atob = (str) => Buffer.from(str, 'base64').toString();
 
 // ============================================
+// Navigator Mock
+// ============================================
+globalThis.navigator = {
+  onLine: true, // Default to online for tests
+  userAgent: 'test-agent',
+};
+
+// ============================================
 // Fetch API Mock
 // ============================================
 export const mockFetch = mock(() => Promise.resolve({ ok: true }));
@@ -255,8 +263,22 @@ export const createMockElement = (overrides = {}) => {
       }
     },
 
+    removeAttribute: (name) => {
+      delete attributes[name];
+      if (name === 'id') _id = '';
+      if (name === 'class') {
+        _className = '';
+        classes.clear();
+      }
+    },
+
     setAttributeNS: (ns, name, value) => {
       attributes[name] = String(value);
+    },
+
+    // Expose event listeners for testing
+    get _eventListeners() {
+      return eventListeners;
     },
 
     focus: mock(() => {}),
@@ -454,6 +476,68 @@ globalThis.document = {
 
   // For activeElement tracking
   activeElement: null,
+
+  // Event listeners for document-level events (keyboard, etc.)
+  _eventListeners: {},
+  addEventListener: function(type, handler) {
+    if (!this._eventListeners[type]) {
+      this._eventListeners[type] = [];
+    }
+    this._eventListeners[type].push(handler);
+  },
+  removeEventListener: function(type, handler) {
+    if (this._eventListeners[type]) {
+      const index = this._eventListeners[type].indexOf(handler);
+      if (index > -1) {
+        this._eventListeners[type].splice(index, 1);
+      }
+    }
+  },
+  dispatchEvent: function(event) {
+    const handlers = this._eventListeners[event.type] || [];
+    handlers.forEach(handler => handler(event));
+    return true;
+  },
+};
+
+// ============================================
+// Event Constructors
+// ============================================
+globalThis.KeyboardEvent = class KeyboardEvent {
+  constructor(type, options = {}) {
+    this.type = type;
+    this.key = options.key || '';
+    this.code = options.code || '';
+    this.shiftKey = options.shiftKey || false;
+    this.ctrlKey = options.ctrlKey || false;
+    this.altKey = options.altKey || false;
+    this.metaKey = options.metaKey || false;
+    this.bubbles = options.bubbles !== undefined ? options.bubbles : false;
+    this.cancelable = options.cancelable !== undefined ? options.cancelable : false;
+    this.defaultPrevented = false;
+  }
+  preventDefault() {
+    this.defaultPrevented = true;
+  }
+  stopPropagation() {}
+};
+
+globalThis.MouseEvent = class MouseEvent {
+  constructor(type, options = {}) {
+    this.type = type;
+    this.bubbles = options.bubbles !== undefined ? options.bubbles : false;
+    this.cancelable = options.cancelable !== undefined ? options.cancelable : false;
+    this.target = options.target || null;
+    this.currentTarget = options.currentTarget || null;
+    this.clientX = options.clientX || 0;
+    this.clientY = options.clientY || 0;
+    this.button = options.button || 0;
+    this.defaultPrevented = false;
+  }
+  preventDefault() {
+    this.defaultPrevented = true;
+  }
+  stopPropagation() {}
 };
 
 // ============================================
@@ -543,29 +627,53 @@ export function setFetchResponse(responseFactory) {
 
 /**
  * Create a mock form with specified field values
+ * Uses createMockElement for proper DOM simulation
  * @param {Object} fields - Object mapping field names to values
  * @returns {Object} Mock form object
  */
 export function createMockForm(fields = {}) {
-  const form = {
-    elements: [],
-    querySelectorAll: mock(() => []),
-    querySelector: mock(() => null),
-    reset: mock(() => {}),
-    submit: mock(() => {}),
-  };
+  const form = createMockElement({ tagName: 'FORM' });
+  form.elements = [];
+  form.reset = mock(() => {});
+  form.submit = mock(() => {});
+
+  // Create input elements for each field
   for (const [name, value] of Object.entries(fields)) {
-    const field = {
-      value: String(value),
-      name,
-      tagName: 'INPUT',
-      disabled: false,
-      setAttribute: mock(() => {}),
-      removeAttribute: mock(() => {}),
-    };
+    const field = createMockElement({ tagName: 'INPUT' });
+    field.id = name;
+    field.name = name;
+    field.value = String(value);
+    field.disabled = false;
+    field.focus = mock(() => {});
+
+    // Create a form-group container for the field
+    const formGroup = createMockElement();
+    formGroup.className = 'form-group';
+    formGroup.appendChild(field);
+
+    // Set up closest() to return the form group
+    field.closest = mock((selector) => {
+      if (selector === '.form-group') return formGroup;
+      if (selector === 'form') return form;
+      return null;
+    });
+
+    form.appendChild(formGroup);
     form[name] = field;
     form.elements.push(field);
   }
+
+  // Override insertBefore for error summary
+  form.insertBefore = function(newChild, refChild) {
+    if (refChild === form.firstChild) {
+      form.children.unshift(newChild);
+      newChild.parentNode = form;
+    } else {
+      form.appendChild(newChild);
+    }
+    return newChild;
+  };
+
   return form;
 }
 
