@@ -240,20 +240,45 @@ export function dismissAllToasts() {
 }
 
 /**
- * Convenience functions for specific toast types
+ * Shows a success toast notification
+ * @param {string} message - The notification message
+ * @param {object} [options={}] - Optional configuration
+ * @param {number} [options.duration] - Custom duration in ms (default: 5000)
+ * @returns {HTMLElement} The toast element
  */
 export function showSuccess(message, options = {}) {
   return showToast(message, 'success', options);
 }
 
+/**
+ * Shows an error toast notification
+ * @param {string} message - The notification message
+ * @param {object} [options={}] - Optional configuration
+ * @param {number} [options.duration] - Custom duration in ms (default: 0, no auto-dismiss)
+ * @returns {HTMLElement} The toast element
+ */
 export function showError(message, options = {}) {
   return showToast(message, 'error', options);
 }
 
+/**
+ * Shows a warning toast notification
+ * @param {string} message - The notification message
+ * @param {object} [options={}] - Optional configuration
+ * @param {number} [options.duration] - Custom duration in ms (default: 7000)
+ * @returns {HTMLElement} The toast element
+ */
 export function showWarning(message, options = {}) {
   return showToast(message, 'warning', options);
 }
 
+/**
+ * Shows an info toast notification
+ * @param {string} message - The notification message
+ * @param {object} [options={}] - Optional configuration
+ * @param {number} [options.duration] - Custom duration in ms (default: 5000)
+ * @returns {HTMLElement} The toast element
+ */
 export function showInfo(message, options = {}) {
   return showToast(message, 'info', options);
 }
