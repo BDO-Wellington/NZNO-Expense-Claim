@@ -10,16 +10,19 @@ import { enablePrintMode, disablePrintMode, showAlert } from './ui-handlers.js';
 
 /**
  * Generates a dynamic PDF filename based on form data.
+ * Prefixed with "1_" to ensure it appears first when sorted alphabetically.
  * @returns {string} PDF filename
  */
 export function getDynamicPdfFilename() {
   const nameInput = document.getElementById('fullName');
   const dateInput = document.getElementById('expenseDate');
-  
+
   const name = sanitizeFilename(nameInput?.value || 'Unknown');
   const date = sanitizeFilename(dateInput?.value || 'Unknown');
-  
-  return `Expense_Claim_Form_${name}_${date}.pdf`;
+
+  // Prefix with "1_" to ensure summary PDF sorts before attachments in systems
+  // that display attachments alphabetically (e.g., Xero)
+  return `1_Expense_Claim_Summary_${name}_${date}.pdf`;
 }
 
 /**
@@ -373,16 +376,19 @@ function convertImageToJpegBuffer(dataUrl) {
 
 /**
  * Gets the filename for merged attachments PDF.
+ * Prefixed with "2_" to ensure it appears after the summary when sorted alphabetically.
  * @returns {string} Filename for merged attachments
  */
 export function getAttachmentsPdfFilename() {
   const nameInput = document.getElementById('fullName');
   const dateInput = document.getElementById('expenseDate');
-  
+
   const name = sanitizeFilename(nameInput?.value || 'Unknown');
   const date = sanitizeFilename(dateInput?.value || 'Unknown');
-  
-  return `Expense_Claim_Form_Attachments_${name}_${date}.pdf`;
+
+  // Prefix with "2_" to ensure attachments PDF sorts after summary in systems
+  // that display attachments alphabetically (e.g., Xero)
+  return `2_Expense_Claim_Receipts_${name}_${date}.pdf`;
 }
 
 /**

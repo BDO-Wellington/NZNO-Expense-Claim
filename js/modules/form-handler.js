@@ -68,9 +68,12 @@ function getErrorMessage(errorType) {
 async function collectStandardExpenses() {
   const standardExpenses = [];
   const standardRows = document.querySelectorAll('#StandardExpensesTable tbody tr');
-  
+
   for (const row of standardRows) {
-    const type = row.cells[0].textContent.trim();
+    // Get the expense name from the .expense-name span, not the full cell text
+    // The cell contains both name and account code: "<span class='expense-name'>Flights</span><span class='expense-code'> (480)</span>"
+    const nameSpan = row.cells[0].querySelector('.expense-name');
+    const type = nameSpan ? nameSpan.textContent.trim() : row.cells[0].textContent.trim();
     const amountInput = row.querySelector('input[type="number"]');
     const fileInput = row.querySelector('input[type="file"]');
     

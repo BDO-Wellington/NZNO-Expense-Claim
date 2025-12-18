@@ -36,7 +36,7 @@ describe('getDynamicPdfFilename', () => {
 
     const filename = getDynamicPdfFilename();
 
-    expect(filename).toBe('Expense_Claim_Form_John_Smith_2025_12_15.pdf');
+    expect(filename).toBe('1_Expense_Claim_Summary_John_Smith_2025_12_15.pdf');
   });
 
   test('sanitizes special characters in name', () => {
@@ -48,7 +48,7 @@ describe('getDynamicPdfFilename', () => {
 
     const filename = getDynamicPdfFilename();
 
-    expect(filename).toBe('Expense_Claim_Form_John_O_Brien_2025_12_15.pdf');
+    expect(filename).toBe('1_Expense_Claim_Summary_John_O_Brien_2025_12_15.pdf');
   });
 
   test('uses Unknown for missing name', () => {
@@ -84,7 +84,7 @@ describe('getDynamicPdfFilename', () => {
 
     const filename = getDynamicPdfFilename();
 
-    expect(filename).toBe('Expense_Claim_Form_Unknown_Unknown.pdf');
+    expect(filename).toBe('1_Expense_Claim_Summary_Unknown_Unknown.pdf');
   });
 });
 
@@ -106,7 +106,7 @@ describe('getAttachmentsPdfFilename', () => {
 
     const filename = getAttachmentsPdfFilename();
 
-    expect(filename).toBe('Expense_Claim_Form_Attachments_Jane_Doe_2025_06_20.pdf');
+    expect(filename).toBe('2_Expense_Claim_Receipts_Jane_Doe_2025_06_20.pdf');
   });
 
   test('uses Unknown for missing inputs', () => {
@@ -114,7 +114,23 @@ describe('getAttachmentsPdfFilename', () => {
 
     const filename = getAttachmentsPdfFilename();
 
-    expect(filename).toBe('Expense_Claim_Form_Attachments_Unknown_Unknown.pdf');
+    expect(filename).toBe('2_Expense_Claim_Receipts_Unknown_Unknown.pdf');
+  });
+
+  test('summary filename sorts before attachments filename alphabetically', () => {
+    globalThis.document.getElementById = mock((id) => {
+      if (id === 'fullName') return { value: 'Test User' };
+      if (id === 'expenseDate') return { value: '2025-01-01' };
+      return null;
+    });
+
+    const summaryFilename = getDynamicPdfFilename();
+    const attachmentsFilename = getAttachmentsPdfFilename();
+
+    // Verify alphabetical ordering: summary (1_) comes before attachments (2_)
+    expect(summaryFilename < attachmentsFilename).toBe(true);
+    expect(summaryFilename.startsWith('1_')).toBe(true);
+    expect(attachmentsFilename.startsWith('2_')).toBe(true);
   });
 });
 
