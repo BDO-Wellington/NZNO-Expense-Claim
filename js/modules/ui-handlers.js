@@ -191,9 +191,18 @@ export function updateVehicleAmount(kilometres) {
 export function showAlert(message, type = 'info') {
   const alertContainer = document.getElementById('alert-container');
   if (alertContainer) {
-    alertContainer.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
+    // Clear existing content safely
+    alertContainer.textContent = '';
+
+    // Create alert element using safe DOM methods (prevents XSS)
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.setAttribute('role', 'alert');
+    alertDiv.textContent = message;
+    alertContainer.appendChild(alertDiv);
+
     if (type === 'success') {
-      setTimeout(() => { alertContainer.innerHTML = ''; }, 5000);
+      setTimeout(() => { alertContainer.textContent = ''; }, 5000);
     }
   }
 }

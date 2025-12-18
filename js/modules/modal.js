@@ -182,8 +182,17 @@ function handleEscKey(event) {
 function closeModal(confirmed) {
   if (!activeModal) return;
 
+  // Store references before any async operations to prevent race conditions
+  const modal = activeModal;
+  const resolveFunc = modal._resolve;
+  const focusTarget = previouslyFocusedElement;
+
+  // Prevent double-close by clearing activeModal immediately
+  activeModal = null;
+  previouslyFocusedElement = null;
+
   // Trigger close animation
-  activeModal.classList.remove('modal-visible');
+  modal.classList.remove('modal-visible');
 
   // Remove event listeners
   document.removeEventListener('keydown', handleFocusTrap);
@@ -192,24 +201,22 @@ function closeModal(confirmed) {
   // Restore body scroll
   document.body.style.overflow = '';
 
-  // Remove modal after animation
+  // Resolve the promise immediately (before animation completes)
+  if (resolveFunc) {
+    resolveFunc(confirmed);
+  }
+
+  // Remove modal from DOM after animation completes
   setTimeout(() => {
-    if (activeModal && activeModal.parentNode) {
-      activeModal.parentNode.removeChild(activeModal);
+    if (modal && modal.parentNode) {
+      modal.parentNode.removeChild(modal);
     }
-    activeModal = null;
 
     // Restore focus to previous element
-    if (previouslyFocusedElement && previouslyFocusedElement.focus) {
-      previouslyFocusedElement.focus();
+    if (focusTarget && focusTarget.focus) {
+      focusTarget.focus();
     }
-    previouslyFocusedElement = null;
   }, MODAL_CONFIG.ANIMATION_DURATION);
-
-  // Resolve the promise
-  if (activeModal && activeModal._resolve) {
-    activeModal._resolve(confirmed);
-  }
 }
 
 /**

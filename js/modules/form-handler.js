@@ -246,10 +246,14 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
           mimeType: 'application/pdf',
           content: mergedPdfBase64
         });
+      } else {
+        // Warn user that attachments could not be processed
+        showWarning('Attachments could not be merged into PDF. Your claim will be submitted without receipt images.', { duration: 8000 });
       }
     } catch (err) {
       logError('Attachment merge failed', err);
-      // Continue with just the summary PDF
+      // Warn user about the failure and continue with just the summary PDF
+      showWarning('Failed to process attachments. Your claim will be submitted without receipt images.', { duration: 8000 });
     }
 
     // Base64 encode attachments array (same pattern as lineItems) to prevent Zapier flattening

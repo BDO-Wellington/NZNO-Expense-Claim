@@ -22,7 +22,7 @@ describe('showAlert', () => {
     globalThis.document.getElementById = originalGetElementById;
   });
 
-  test('sets alert container innerHTML with correct message and type', () => {
+  test('creates alert element with correct message and type', () => {
     const mockContainer = createMockElement();
     globalThis.document.getElementById = mock((id) => {
       if (id === 'alert-container') return mockContainer;
@@ -31,7 +31,11 @@ describe('showAlert', () => {
 
     showAlert('Test message', 'danger');
 
-    expect(mockContainer.innerHTML).toBe('<div class="alert alert-danger" role="alert">Test message</div>');
+    // Check the alert was appended as a child element
+    expect(mockContainer.children.length).toBe(1);
+    const alertDiv = mockContainer.children[0];
+    expect(alertDiv.className).toBe('alert alert-danger');
+    expect(alertDiv.textContent).toBe('Test message');
   });
 
   test('uses info type as default', () => {
@@ -43,7 +47,8 @@ describe('showAlert', () => {
 
     showAlert('Default type message');
 
-    expect(mockContainer.innerHTML).toContain('alert-info');
+    expect(mockContainer.children.length).toBe(1);
+    expect(mockContainer.children[0].className).toContain('alert-info');
   });
 
   test('handles missing alert container gracefully', () => {
@@ -63,7 +68,8 @@ describe('showAlert', () => {
 
     showAlert('Message', type);
 
-    expect(mockContainer.innerHTML).toContain(expected);
+    expect(mockContainer.children.length).toBe(1);
+    expect(mockContainer.children[0].className).toContain(expected);
   });
 });
 
