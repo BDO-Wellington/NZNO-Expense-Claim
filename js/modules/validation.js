@@ -44,6 +44,10 @@ const VALIDATION_RULES = {
     required: true,
     custom: (value) => {
       const date = new Date(value);
+      // Check for invalid date (e.g., "invalid" or malformed input)
+      if (isNaN(date.getTime())) {
+        return 'Please enter a valid date';
+      }
       const today = new Date();
       today.setHours(23, 59, 59, 999);
       if (date > today) {
