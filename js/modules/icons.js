@@ -36,7 +36,7 @@ const ICON_PATHS = {
     path: 'M12 2C6.48 2 2 6.48 2 12H5C5 8.13 8.13 5 12 5V2Z'
   },
   trash: {
-    viewBox: '0 0 16 18',
+    viewBox: '0 0 16 20',
     path: 'M3 18C3 19.1 3.9 20 5 20H13C14.1 20 15 19.1 15 18V6H3V18ZM5 8H13V18H5V8ZM12.5 1L11.5 0H6.5L5.5 1H2V3H16V1H12.5Z'
   },
   plus: {
@@ -92,7 +92,7 @@ const ICON_SIZES = {
 export function createIcon(name, options = {}) {
   const iconData = ICON_PATHS[name];
   if (!iconData) {
-    console.warn(`[Icons] Unknown icon: ${name}`);
+    console.warn(`[ExpenseClaim] Unknown icon: ${name}`);
     return null;
   }
 
