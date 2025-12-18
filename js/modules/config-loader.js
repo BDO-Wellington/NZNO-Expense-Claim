@@ -147,3 +147,26 @@ export function shouldSubmitIndividually(config) {
 export function shouldStringifyLineItems(config) {
   return parseBooleanConfig(getConfigValue(config, 'STRINGIFY_LINE_ITEMS_FOR_ZAPIER', true));
 }
+
+/**
+ * Gets the effective API URL based on DEBUG_MODE.
+ * Uses API_URL_MOCK when not in production, API_URL otherwise.
+ * @param {object} config - Configuration object
+ * @returns {string} The API URL to use
+ */
+export function getEffectiveApiUrl(config) {
+  const isProduction = !isDebugMode(config);
+
+  if (isProduction) {
+    return getConfigValue(config, 'API_URL', '');
+  }
+
+  // In debug/dev mode, prefer API_URL_MOCK if available
+  const mockUrl = getConfigValue(config, 'API_URL_MOCK', null);
+  if (mockUrl && mockUrl.trim() !== '') {
+    return mockUrl;
+  }
+
+  // Fall back to API_URL if no mock URL configured
+  return getConfigValue(config, 'API_URL', '');
+}

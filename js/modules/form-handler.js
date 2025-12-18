@@ -9,7 +9,7 @@ import { collectAttachments, logError, safeParseFloat } from './utils.js';
 import { EXPENSE_TYPES, getAccountCode, VEHICLE_ACCOUNT_CODE } from './expense-types.js';
 import { showAlert, setFormToViewMode, setButtonLoadingWithText, showProgressOverlay, updateProgressStatus, hideProgressOverlay } from './ui-handlers.js';
 import { generatePDFBase64, mergeAttachmentsPDF, getDynamicPdfFilename, getAttachmentsPdfFilename } from './pdf-generator.js';
-import { shouldSubmitIndividually, shouldStringifyLineItems } from './config-loader.js';
+import { shouldSubmitIndividually, shouldStringifyLineItems, getEffectiveApiUrl } from './config-loader.js';
 import { showSuccess, showError, showWarning } from './toast.js';
 
 /**
@@ -353,7 +353,7 @@ export async function handleFormSubmit(event, config) {
   event.preventDefault();
 
   const form = event.target;
-  const apiUrl = config.API_URL;
+  const apiUrl = getEffectiveApiUrl(config);
   const submitButton = form.querySelector('button[type="submit"]');
 
   // Check for offline status before attempting submission
