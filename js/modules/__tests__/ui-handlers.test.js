@@ -1,7 +1,7 @@
 /**
  * UI Handlers Module Tests
  */
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 import { createMockElement, createMockForm, resetAllMocks } from '../../../tests/setup.js';
 import {
   showAlert,
@@ -10,9 +10,16 @@ import {
   removeExpenseRow,
 } from '../ui-handlers.js';
 
+// Store originals to restore after tests
+const originalGetElementById = globalThis.document.getElementById;
+
 describe('showAlert', () => {
   beforeEach(() => {
     resetAllMocks();
+  });
+
+  afterEach(() => {
+    globalThis.document.getElementById = originalGetElementById;
   });
 
   test('sets alert container innerHTML with correct message and type', () => {
@@ -137,6 +144,10 @@ describe('updateVehicleAmount', () => {
     resetAllMocks();
   });
 
+  afterEach(() => {
+    globalThis.document.getElementById = originalGetElementById;
+  });
+
   test('updates vehicle amount input with calculated value', () => {
     const mockInput = { value: '' };
     globalThis.document.getElementById = mock((id) => {
@@ -175,9 +186,32 @@ describe('updateVehicleAmount', () => {
 });
 
 describe('removeExpenseRow', () => {
-  test('removes parent row when button clicked', () => {
+  beforeEach(() => {
+    resetAllMocks();
+  });
+
+  afterEach(() => {
+    globalThis.document.getElementById = originalGetElementById;
+  });
+
+  test('removes parent row when button clicked', async () => {
     const mockRemove = mock(() => {});
-    const mockRow = { remove: mockRemove };
+    const mockRow = {
+      remove: mockRemove,
+      querySelector: mock(() => null), // No description input, so row can be removed without confirmation
+      classList: {
+        add: mock(() => {}),
+        remove: mock(() => {}),
+      },
+      style: {},
+      offsetHeight: 50,
+      addEventListener: mock((event, handler) => {
+        // Immediately call the transitionend handler to complete removal
+        if (event === 'transitionend') {
+          setTimeout(handler, 0);
+        }
+      }),
+    };
     const mockButton = {
       closest: mock((selector) => {
         if (selector === 'tr') return mockRow;
@@ -185,7 +219,10 @@ describe('removeExpenseRow', () => {
       }),
     };
 
-    removeExpenseRow(mockButton);
+    await removeExpenseRow(mockButton);
+
+    // Wait for setTimeout(200ms) in removeExpenseRow
+    await new Promise(resolve => setTimeout(resolve, 250));
 
     expect(mockRemove).toHaveBeenCalled();
   });

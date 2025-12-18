@@ -131,71 +131,15 @@ function stopErrorCapture() {
 
 /**
  * Sets up additional DOM mocks required for UI components.
+ * Note: Uses the existing document mock from tests/setup.js to avoid
+ * breaking other tests that run after this test file.
  */
 function setupExtendedDOMMocks() {
-  // Add requestAnimationFrame for animations
-  globalThis.requestAnimationFrame = mock((callback) => {
-    setTimeout(callback, 0);
-    return 1;
-  });
-  globalThis.cancelAnimationFrame = mock(() => {});
-
-  // Add createElementNS for SVG elements (toast.js icons)
-  globalThis.document.createElementNS = mock((ns, tag) => ({
-    setAttribute: mock(() => {}),
-    setAttributeNS: mock(() => {}),
-    appendChild: mock(() => {}),
-    innerHTML: '',
-    classList: {
-      add: mock(() => {}),
-      remove: mock(() => {}),
-      contains: mock(() => false),
-    },
-    style: {},
-  }));
-
-  // Ensure document.body has style property
-  globalThis.document.body = {
-    innerHTML: '',
-    style: { overflow: '' },
-    classList: {
-      add: mock(() => {}),
-      remove: mock(() => {}),
-    },
-    appendChild: mock(() => {}),
-    removeChild: mock(() => {}),
-    contains: mock(() => false),
-  };
-
-  // Mock progress overlay element
-  const mockProgressOverlay = createMockElement({
-    classList: {
-      add: mock(() => {}),
-      remove: mock(() => {}),
-      contains: mock(() => false),
-    },
-    offsetHeight: 100,
-  });
-
-  // Mock toast container
-  const mockToastContainer = createMockElement({
-    appendChild: mock(() => {}),
-    removeChild: mock(() => {}),
-  });
-
-  // Enhanced querySelector for specific elements
-  globalThis.document.querySelector = mock((selector) => {
-    if (selector === '.progress-overlay') return mockProgressOverlay;
-    if (selector === '.toast-container') return mockToastContainer;
-    if (selector === '#progress-status') return createMockElement();
-    return createMockElement();
-  });
-
-  // getElementById for various UI elements
-  globalThis.document.getElementById = mock((id) => {
-    if (id === 'progress-status') return createMockElement();
-    return createMockElement();
-  });
+  // requestAnimationFrame and createElementNS are already set up in tests/setup.js
+  // Just ensure body has required properties
+  if (globalThis.document.body) {
+    globalThis.document.body.style = { overflow: '' };
+  }
 }
 
 // ============================================
