@@ -208,7 +208,8 @@ export async function mergeAttachmentsPDF() {
 
         if (file.type === 'application/pdf') {
           // Load the PDF and copy all its pages
-          const sourcePdf = await PDFDocument.load(arrayBuffer);
+          // ignoreEncryption: true allows loading PDFs with encryption metadata (e.g., signed invoices)
+          const sourcePdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
           const pageIndices = sourcePdf.getPageIndices();
           const copiedPages = await mergedPdf.copyPages(sourcePdf, pageIndices);
           copiedPages.forEach(page => mergedPdf.addPage(page));
