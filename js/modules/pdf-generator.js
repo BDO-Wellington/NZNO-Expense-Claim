@@ -5,8 +5,20 @@
  * Date: October 28, 2025
  */
 
-import { sanitizeFilename, logError } from './utils.js';
+import { sanitizeFilename, logError, formatBytes, exceedsPayloadLimit, DEFAULT_PAYLOAD_LIMIT_MB } from './utils.js';
 import { enablePrintMode, disablePrintMode, showAlert } from './ui-handlers.js';
+import { getAccountCode, EXPENSE_TYPES } from './expense-types.js';
+
+/**
+ * Compression presets for progressive image compression.
+ * Each level is more aggressive than the last.
+ * @constant {Array<{name: string, maxDimension: number, quality: number}>}
+ */
+export const COMPRESSION_PRESETS = [
+  { name: 'normal', maxDimension: 1200, quality: 0.7 },
+  { name: 'aggressive', maxDimension: 900, quality: 0.5 },
+  { name: 'extreme', maxDimension: 600, quality: 0.3 }
+];
 
 /**
  * Generates a dynamic PDF filename based on form data.
@@ -392,6 +404,128 @@ function compressImageToJpegBuffer(dataUrl, options = {}) {
 }
 
 /**
+ * Processes an image with progressive compression, trying more aggressive
+ * compression levels until the result fits within the size limit.
+ * @param {string} dataUrl - Image data URL
+ * @param {number} maxSizeBytes - Maximum allowed size in bytes
+ * @returns {Promise<{buffer: ArrayBuffer, preset: string, sizeBytes: number}|null>}
+ */
+async function compressImageProgressively(dataUrl, maxSizeBytes) {
+  for (const preset of COMPRESSION_PRESETS) {
+    const buffer = await compressImageToJpegBuffer(dataUrl, {
+      maxDimension: preset.maxDimension,
+      quality: preset.quality
+    });
+
+    if (buffer) {
+      const sizeBytes = buffer.byteLength;
+      if (sizeBytes <= maxSizeBytes) {
+        console.log(`[ExpenseClaim] Image compressed with ${preset.name} preset: ${formatBytes(sizeBytes)}`);
+        return { buffer, preset: preset.name, sizeBytes };
+      }
+      console.log(`[ExpenseClaim] ${preset.name} compression: ${formatBytes(sizeBytes)} still exceeds ${formatBytes(maxSizeBytes)}`);
+    }
+  }
+  return null;
+}
+
+/**
+ * Processes a single file and returns it as a standalone PDF attachment object.
+ * Used as fallback when merged PDFs exceed size limits.
+ * @param {File} file - The file to process
+ * @param {string} expenseType - The expense type name
+ * @param {number} maxSizeBytes - Maximum size in bytes
+ * @returns {Promise<{fileName: string, mimeType: string, content: string, sizeBytes: number}|null>}
+ */
+export async function processFileAsIndividualAttachment(file, expenseType, maxSizeBytes = 2 * 1024 * 1024) {
+  const PDFLib = window.PDFLib;
+  if (!PDFLib) {
+    logError('pdf-lib library not loaded', null);
+    return null;
+  }
+
+  const { PDFDocument, rgb } = PDFLib;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+
+    if (file.type === 'application/pdf') {
+      // For PDFs, check size and return as-is if small enough
+      const base64 = uint8ArrayToBase64(new Uint8Array(arrayBuffer));
+      const sizeBytes = arrayBuffer.byteLength;
+
+      if (sizeBytes <= maxSizeBytes) {
+        return {
+          fileName: file.name,
+          mimeType: 'application/pdf',
+          content: base64,
+          sizeBytes
+        };
+      }
+
+      // PDF too large - can't compress further
+      console.warn(`[ExpenseClaim] PDF ${file.name} (${formatBytes(sizeBytes)}) exceeds limit, cannot compress`);
+      return null;
+
+    } else if (file.type.startsWith('image/')) {
+      // For images, use progressive compression
+      const dataUrl = await fileToDataURL(file);
+      const compressed = await compressImageProgressively(dataUrl, maxSizeBytes * 0.7); // 70% of limit to leave room for PDF overhead
+
+      if (!compressed) {
+        console.warn(`[ExpenseClaim] Image ${file.name} still too large after extreme compression`);
+        return null;
+      }
+
+      // Create single-page PDF with compressed image
+      const singlePagePdf = await PDFDocument.create();
+      const image = await singlePagePdf.embedJpg(compressed.buffer);
+
+      const pageWidth = 595.28;
+      const pageHeight = 841.89;
+      const margin = 40;
+      const maxWidth = pageWidth - (margin * 2);
+      const maxHeight = pageHeight - (margin * 2) - 30;
+
+      const imgDims = image.scale(1);
+      let scale = 1;
+      if (imgDims.width > maxWidth || imgDims.height > maxHeight) {
+        scale = Math.min(maxWidth / imgDims.width, maxHeight / imgDims.height);
+      }
+
+      const scaledWidth = imgDims.width * scale;
+      const scaledHeight = imgDims.height * scale;
+      const x = (pageWidth - scaledWidth) / 2;
+      const y = (pageHeight - scaledHeight) / 2 + 15;
+
+      const page = singlePagePdf.addPage([pageWidth, pageHeight]);
+      page.drawImage(image, { x, y, width: scaledWidth, height: scaledHeight });
+      page.drawText(`${expenseType}: ${file.name}`, {
+        x: margin,
+        y: 20,
+        size: 10,
+        color: rgb(0.3, 0.3, 0.3)
+      });
+
+      const pdfBytes = await singlePagePdf.save();
+      const base64 = uint8ArrayToBase64(pdfBytes);
+
+      return {
+        fileName: `${sanitizeFilename(expenseType)}_${file.name.replace(/\.[^.]+$/, '')}.pdf`,
+        mimeType: 'application/pdf',
+        content: base64,
+        sizeBytes: pdfBytes.length
+      };
+    }
+
+    return null;
+  } catch (error) {
+    logError(`Failed to process individual file: ${file.name}`, error);
+    return null;
+  }
+}
+
+/**
  * Gets the filename for merged attachments PDF.
  * Prefixed with "2_" to ensure it appears after the summary when sorted alphabetically.
  * @returns {string} Filename for merged attachments
@@ -420,6 +554,201 @@ function fileToDataURL(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+// ============================================================================
+// Account Code Grouped Attachment Functions
+// Used for batched submissions when payload exceeds Xero API limits
+// ============================================================================
+
+/**
+ * Collects all attachments from the form grouped by their associated account code.
+ * Traverses the DOM to find file inputs and their parent expense rows.
+ * @returns {Map<string, File[]>} Map of account code to array of files
+ */
+export function collectAttachmentsWithAccountCodes() {
+  const attachmentsByCode = new Map();
+
+  // Collect from Standard Expenses table
+  const standardRows = document.querySelectorAll('#StandardExpensesTable tbody tr');
+  for (const row of standardRows) {
+    const nameSpan = row.querySelector('.expense-name');
+    const fileInput = row.querySelector('input[type="file"]');
+
+    if (nameSpan && fileInput && fileInput.files && fileInput.files.length > 0) {
+      const expenseType = nameSpan.textContent.trim();
+      const accountCode = getAccountCode(expenseType) || 'UNKNOWN';
+
+      if (!attachmentsByCode.has(accountCode)) {
+        attachmentsByCode.set(accountCode, []);
+      }
+
+      for (let i = 0; i < fileInput.files.length; i++) {
+        attachmentsByCode.get(accountCode).push({
+          file: fileInput.files[i],
+          expenseType,
+          accountCode
+        });
+      }
+    }
+  }
+
+  // Collect from Other Expenses table
+  const otherRows = document.querySelectorAll('#otherExpensesBody tr');
+  for (const row of otherRows) {
+    const fileInput = row.querySelector('input[name="other_attachment[]"]');
+    const descInput = row.querySelector('input[name="other_description[]"]');
+
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      const accountCode = 'OTHER';
+      const description = descInput?.value || 'Other Expense';
+
+      if (!attachmentsByCode.has(accountCode)) {
+        attachmentsByCode.set(accountCode, []);
+      }
+
+      for (let i = 0; i < fileInput.files.length; i++) {
+        attachmentsByCode.get(accountCode).push({
+          file: fileInput.files[i],
+          expenseType: description,
+          accountCode
+        });
+      }
+    }
+  }
+
+  return attachmentsByCode;
+}
+
+/**
+ * Gets a display name for an account code.
+ * @param {string} accountCode - The account code
+ * @returns {string} Human-readable name
+ */
+function getAccountCodeDisplayName(accountCode) {
+  if (accountCode === 'OTHER') return 'Other';
+  if (accountCode === 'UNKNOWN') return 'Unknown';
+
+  // Find expense type with this account code
+  const expenseType = EXPENSE_TYPES.find(t => t.accountCode === accountCode);
+  return expenseType ? expenseType.name : accountCode;
+}
+
+/**
+ * Merges attachments grouped by account code into separate PDFs.
+ * Each account code group becomes its own PDF file.
+ * @returns {Promise<Array<{accountCode: string, displayName: string, pdf: string, filename: string, sizeBytes: number}>>}
+ */
+export async function mergeAttachmentsByAccountCode() {
+  const attachmentsByCode = collectAttachmentsWithAccountCodes();
+  const results = [];
+
+  if (attachmentsByCode.size === 0) {
+    return results;
+  }
+
+  // Check if pdf-lib is available
+  const PDFLib = window.PDFLib;
+  if (!PDFLib) {
+    logError('pdf-lib library not loaded', null);
+    return results;
+  }
+
+  const { PDFDocument, rgb } = PDFLib;
+
+  for (const [accountCode, attachments] of attachmentsByCode) {
+    try {
+      const mergedPdf = await PDFDocument.create();
+      const displayName = getAccountCodeDisplayName(accountCode);
+
+      for (const { file } of attachments) {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+
+          if (file.type === 'application/pdf') {
+            // Load and copy PDF pages
+            const sourcePdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+            const pageIndices = sourcePdf.getPageIndices();
+            const copiedPages = await mergedPdf.copyPages(sourcePdf, pageIndices);
+            copiedPages.forEach(page => mergedPdf.addPage(page));
+            console.log(`[ExpenseClaim] Merged PDF for ${displayName}: ${file.name} (${pageIndices.length} pages)`);
+
+          } else if (file.type.startsWith('image/')) {
+            // Compress and embed image
+            const dataUrl = await fileToDataURL(file);
+            const compressedBuffer = await compressImageToJpegBuffer(dataUrl);
+            if (!compressedBuffer) {
+              console.warn(`[ExpenseClaim] Failed to compress image: ${file.name}, skipping`);
+              continue;
+            }
+            const image = await mergedPdf.embedJpg(compressedBuffer);
+
+            // Calculate dimensions to fit on A4 page
+            const pageWidth = 595.28;
+            const pageHeight = 841.89;
+            const margin = 40;
+            const maxWidth = pageWidth - (margin * 2);
+            const maxHeight = pageHeight - (margin * 2) - 30;
+
+            const imgDims = image.scale(1);
+            let scale = 1;
+            if (imgDims.width > maxWidth || imgDims.height > maxHeight) {
+              const scaleX = maxWidth / imgDims.width;
+              const scaleY = maxHeight / imgDims.height;
+              scale = Math.min(scaleX, scaleY);
+            }
+
+            const scaledWidth = imgDims.width * scale;
+            const scaledHeight = imgDims.height * scale;
+            const x = (pageWidth - scaledWidth) / 2;
+            const y = (pageHeight - scaledHeight) / 2 + 15;
+
+            const page = mergedPdf.addPage([pageWidth, pageHeight]);
+            page.drawImage(image, { x, y, width: scaledWidth, height: scaledHeight });
+
+            // Add filename at bottom
+            page.drawText(file.name, {
+              x: margin,
+              y: 20,
+              size: 10,
+              color: rgb(0.3, 0.3, 0.3)
+            });
+
+            console.log(`[ExpenseClaim] Embedded image for ${displayName}: ${file.name}`);
+          }
+        } catch (err) {
+          logError(`Failed to process attachment for ${displayName}: ${file.name}`, err);
+        }
+      }
+
+      if (mergedPdf.getPageCount() > 0) {
+        const pdfBytes = await mergedPdf.save();
+        const base64 = uint8ArrayToBase64(pdfBytes);
+
+        // Generate filename with account code
+        const nameInput = document.getElementById('fullName');
+        const dateInput = document.getElementById('expenseDate');
+        const name = sanitizeFilename(nameInput?.value || 'Unknown');
+        const date = sanitizeFilename(dateInput?.value || 'Unknown');
+        const filename = `Receipts_${sanitizeFilename(displayName)}_${accountCode}_${name}_${date}.pdf`;
+
+        results.push({
+          accountCode,
+          displayName,
+          pdf: base64,
+          filename,
+          sizeBytes: pdfBytes.length,
+          pageCount: mergedPdf.getPageCount()
+        });
+
+        console.log(`[ExpenseClaim] Created PDF for ${displayName} (${accountCode}): ${formatBytes(pdfBytes.length)}, ${mergedPdf.getPageCount()} pages`);
+      }
+    } catch (error) {
+      logError(`Failed to create PDF for account code ${accountCode}`, error);
+    }
+  }
+
+  return results;
 }
 
 /**

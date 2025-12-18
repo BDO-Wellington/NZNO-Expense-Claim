@@ -119,3 +119,91 @@ export function safeParseFloat(value, defaultValue = 0) {
   const parsed = parseFloat(value);
   return isNaN(parsed) ? defaultValue : parsed;
 }
+
+// ============================================================================
+// Payload Size Utilities
+// Used for pre-flight validation before submitting to Xero API (3.5MB limit)
+// ============================================================================
+
+/**
+ * Default payload size limit in MB.
+ * Set conservatively below Xero's 3.5MB limit to account for JSON overhead.
+ * @constant {number}
+ */
+export const DEFAULT_PAYLOAD_LIMIT_MB = 2.5;
+
+/**
+ * Calculates the decoded byte size of a Base64 string.
+ * Base64 encodes 3 bytes into 4 characters, with padding.
+ * @param {string} base64String - The Base64 encoded string
+ * @returns {number} Size in bytes
+ */
+export function getBase64SizeInBytes(base64String) {
+  if (!base64String || typeof base64String !== 'string') {
+    return 0;
+  }
+  // Remove padding characters
+  const padding = (base64String.match(/=/g) || []).length;
+  // Base64 formula: (length * 3/4) - padding
+  return Math.floor((base64String.length * 3) / 4) - padding;
+}
+
+/**
+ * Calculates the total payload size for an attachments array.
+ * Accounts for JSON structure overhead and optional double Base64 encoding.
+ * @param {Array<{fileName: string, mimeType: string, content: string}>} attachmentsArray - Attachments to measure
+ * @param {boolean} stringifyForZapier - Whether the array will be Base64-encoded again for Zapier
+ * @returns {number} Estimated total size in bytes
+ */
+export function calculatePayloadSize(attachmentsArray, stringifyForZapier = false) {
+  if (!attachmentsArray || !Array.isArray(attachmentsArray)) {
+    return 0;
+  }
+
+  // Calculate size of the attachments array as JSON
+  let totalSize = 0;
+
+  for (const attachment of attachmentsArray) {
+    // Content size (Base64 string)
+    const contentSize = attachment.content ? attachment.content.length : 0;
+    // Metadata overhead (fileName, mimeType, JSON structure)
+    const metadataOverhead = 100; // Approximate overhead per attachment
+    totalSize += contentSize + metadataOverhead;
+  }
+
+  // If stringifying for Zapier, the JSON gets Base64-encoded again
+  // This adds ~33% overhead
+  if (stringifyForZapier) {
+    totalSize = Math.ceil(totalSize * 1.34);
+  }
+
+  // Add overhead for the rest of the payload (form fields, lineItems, etc.)
+  const payloadOverhead = 2000; // ~2KB for other fields
+  totalSize += payloadOverhead;
+
+  return totalSize;
+}
+
+/**
+ * Checks if a payload size exceeds the allowed limit.
+ * @param {number} sizeInBytes - The payload size in bytes
+ * @param {number} limitMB - The limit in megabytes (default: 2.5MB)
+ * @returns {boolean} True if the size exceeds the limit
+ */
+export function exceedsPayloadLimit(sizeInBytes, limitMB = DEFAULT_PAYLOAD_LIMIT_MB) {
+  const limitBytes = limitMB * 1024 * 1024;
+  return sizeInBytes > limitBytes;
+}
+
+/**
+ * Formats bytes as a human-readable string.
+ * @param {number} bytes - Size in bytes
+ * @returns {string} Formatted string (e.g., "2.5 MB", "512 KB")
+ */
+export function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}

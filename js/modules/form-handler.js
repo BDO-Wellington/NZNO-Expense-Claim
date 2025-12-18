@@ -5,10 +5,10 @@
  * Date: October 28, 2025
  */
 
-import { collectAttachments, logError, safeParseFloat } from './utils.js';
+import { collectAttachments, logError, safeParseFloat, calculatePayloadSize, exceedsPayloadLimit, formatBytes, DEFAULT_PAYLOAD_LIMIT_MB } from './utils.js';
 import { EXPENSE_TYPES, getAccountCode, VEHICLE_ACCOUNT_CODE } from './expense-types.js';
 import { showAlert, setFormToViewMode, setButtonLoadingWithText, showProgressOverlay, updateProgressStatus, hideProgressOverlay } from './ui-handlers.js';
-import { generatePDFBase64, mergeAttachmentsPDF, getDynamicPdfFilename, getAttachmentsPdfFilename } from './pdf-generator.js';
+import { generatePDFBase64, mergeAttachmentsPDF, mergeAttachmentsByAccountCode, getDynamicPdfFilename, getAttachmentsPdfFilename, processFileAsIndividualAttachment, collectAttachmentsWithAccountCodes } from './pdf-generator.js';
 import { shouldSubmitIndividually, shouldStringifyLineItems, getEffectiveApiUrl } from './config-loader.js';
 import { showSuccess, showError, showWarning } from './toast.js';
 
@@ -246,26 +246,64 @@ async function submitIndividualItems(expenseItems, formData, apiUrl) {
 }
 
 /**
+ * Submits a single batch to the API.
+ * @param {object} payload - The payload to submit
+ * @param {string} apiUrl - API endpoint URL
+ * @param {boolean} stringifyForZapier - Whether to Base64-encode the payload
+ * @returns {Promise<{success: boolean, errorType?: string}>}
+ */
+async function submitSingleBatch(payload, apiUrl, stringifyForZapier) {
+  try {
+    // Base64 encode attachments if configured for Zapier
+    const finalPayload = {
+      ...payload,
+      attachments: stringifyForZapier
+        ? btoa(JSON.stringify(payload.attachments))
+        : payload.attachments,
+      lineItems: payload.lineItems
+        ? (stringifyForZapier ? btoa(JSON.stringify(payload.lineItems)) : payload.lineItems)
+        : undefined
+    };
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(finalPayload)
+    });
+
+    if (!response.ok) {
+      return { success: false, errorType: ERROR_TYPES.SERVER };
+    }
+    return { success: true };
+  } catch (error) {
+    logError('Batch submission failed', error);
+    return { success: false, errorType: categorizeError(error), error };
+  }
+}
+
+/**
  * Submits all expense data as a bulk submission.
+ * Automatically splits into batches if payload exceeds Xero API limits.
  * @param {Array<object>} expenseItems - All expense items
  * @param {object} vehicleData - Vehicle expense data
  * @param {object} formData - Basic form data
  * @param {string} apiUrl - API endpoint URL
  * @param {object} config - Application configuration
- * @returns {Promise<boolean>} True if submission successful
+ * @returns {Promise<{success: boolean, errorType?: string}>}
  */
 async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
   try {
     // Build line items array
     const lineItemsArray = buildLineItemsArray(expenseItems, vehicleData);
+    const stringifyLineItems = shouldStringifyLineItems(config);
 
     // Show progress overlay for PDF generation
     showProgressOverlay('Generating PDF', 'Creating expense claim summary...');
 
     // Generate summary PDF
-    let pdfBase64;
+    let summaryPdfBase64;
     try {
-      pdfBase64 = await generatePDFBase64();
+      summaryPdfBase64 = await generatePDFBase64();
     } catch (err) {
       logError('PDF generation failed before form submit', err);
       hideProgressOverlay();
@@ -273,72 +311,233 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
       return { success: false, errorType: ERROR_TYPES.UNKNOWN };
     }
 
-    // Determine how to send line items based on config
-    // - As Base64-encoded JSON string: for Zapier Code actions (prevents auto-parsing and flattening)
-    // - As array: for Zapier child key iteration or other integrations
-    const stringifyLineItems = shouldStringifyLineItems(config);
-    const lineItemsPayload = stringifyLineItems
-      ? btoa(JSON.stringify(lineItemsArray)) // Base64 encode to prevent Zapier from detecting and parsing JSON
-      : lineItemsArray;
-
-    // Build attachments array
-    const attachmentsArray = [{
+    // Create summary attachment object
+    const summaryAttachment = {
       fileName: getDynamicPdfFilename(),
       mimeType: 'application/pdf',
-      content: pdfBase64
-    }];
-
-    // Merge attachments into PDF and add to array
-    updateProgressStatus('Merging attachments...');
-    try {
-      const mergedPdfBase64 = await mergeAttachmentsPDF();
-      if (mergedPdfBase64) {
-        attachmentsArray.push({
-          fileName: getAttachmentsPdfFilename(),
-          mimeType: 'application/pdf',
-          content: mergedPdfBase64
-        });
-      } else {
-        // Warn user that attachments could not be processed
-        showWarning('Attachments could not be merged into PDF. Your claim will be submitted without receipt images.', { duration: 8000 });
-      }
-    } catch (err) {
-      logError('Attachment merge failed', err);
-      // Warn user about the failure and continue with just the summary PDF
-      showWarning('Failed to process attachments. Your claim will be submitted without receipt images.', { duration: 8000 });
-    }
-
-    // Base64 encode attachments array (same pattern as lineItems) to prevent Zapier flattening
-    const attachmentsPayload = stringifyLineItems
-      ? btoa(JSON.stringify(attachmentsArray))
-      : attachmentsArray;
-
-    // Build payload
-    const payload = {
-      ...formData,
-      varFlowEnvUpload: false,
-      lineItems: lineItemsPayload,
-      attachments: attachmentsPayload
+      content: summaryPdfBase64
     };
 
-    // Update progress and submit to API
-    updateProgressStatus('Submitting to server...');
+    // Process attachments by account code
+    updateProgressStatus('Processing attachments by category...');
+    let attachmentGroups = [];
+    try {
+      attachmentGroups = await mergeAttachmentsByAccountCode();
+    } catch (err) {
+      logError('Attachment grouping failed', err);
+      showWarning('Failed to process attachments. Submitting without receipt images.', { duration: 8000 });
+    }
 
-    // Submit to API (use text/plain to avoid CORS preflight with Zapier)
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain'
-      },
-      body: JSON.stringify(payload)
-    });
+    // Calculate total payload size (summary + all attachment groups)
+    const allAttachments = [summaryAttachment];
+    for (const group of attachmentGroups) {
+      allAttachments.push({
+        fileName: group.filename,
+        mimeType: 'application/pdf',
+        content: group.pdf
+      });
+    }
+
+    const totalPayloadSize = calculatePayloadSize(allAttachments, stringifyLineItems);
+    const payloadExceedsLimit = exceedsPayloadLimit(totalPayloadSize);
+
+    console.log(`[ExpenseClaim] Total payload size: ${formatBytes(totalPayloadSize)}, Limit: ${DEFAULT_PAYLOAD_LIMIT_MB}MB, Exceeds: ${payloadExceedsLimit}`);
+
+    // If payload fits within limit, use single request (existing behavior)
+    if (!payloadExceedsLimit) {
+      updateProgressStatus('Submitting to server...');
+
+      // Build single payload with all attachments
+      const lineItemsPayload = stringifyLineItems
+        ? btoa(JSON.stringify(lineItemsArray))
+        : lineItemsArray;
+
+      // If we have grouped attachments, use merged PDF approach
+      let attachmentsArray;
+      if (attachmentGroups.length > 0) {
+        // Merge all groups into single PDF for backwards compatibility
+        const mergedPdfBase64 = await mergeAttachmentsPDF();
+        attachmentsArray = [summaryAttachment];
+        if (mergedPdfBase64) {
+          attachmentsArray.push({
+            fileName: getAttachmentsPdfFilename(),
+            mimeType: 'application/pdf',
+            content: mergedPdfBase64
+          });
+        }
+      } else {
+        attachmentsArray = [summaryAttachment];
+      }
+
+      const attachmentsPayload = stringifyLineItems
+        ? btoa(JSON.stringify(attachmentsArray))
+        : attachmentsArray;
+
+      const payload = {
+        ...formData,
+        varFlowEnvUpload: false,
+        lineItems: lineItemsPayload,
+        attachments: attachmentsPayload
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+
+      hideProgressOverlay();
+
+      if (!response.ok) {
+        return { success: false, errorType: ERROR_TYPES.SERVER };
+      }
+      return { success: true };
+    }
+
+    // Payload exceeds limit - use batched submission
+    console.log(`[ExpenseClaim] Payload too large (${formatBytes(totalPayloadSize)}), splitting into batches by account code`);
+    showWarning(`Large payload detected (${formatBytes(totalPayloadSize)}). Submitting in batches...`, { duration: 5000 });
+
+    const totalBatches = 1 + attachmentGroups.length; // Main + attachment groups
+    let successCount = 0;
+    let failedGroups = [];
+
+    // Batch 1: Main submission with summary PDF and line items
+    updateProgressStatus(`Submitting batch 1 of ${totalBatches} (Summary)...`);
+
+    const mainPayload = {
+      ...formData,
+      varFlowEnvUpload: false,
+      lineItems: lineItemsArray,
+      attachments: [summaryAttachment],
+      batchInfo: {
+        batch: 1,
+        totalBatches,
+        type: 'main'
+      }
+    };
+
+    const mainResult = await submitSingleBatch(mainPayload, apiUrl, stringifyLineItems);
+    if (mainResult.success) {
+      successCount++;
+    } else {
+      hideProgressOverlay();
+      return { success: false, errorType: mainResult.errorType || ERROR_TYPES.SERVER };
+    }
+
+    // Batches 2-N: Attachment groups by account code
+    for (let i = 0; i < attachmentGroups.length; i++) {
+      const group = attachmentGroups[i];
+      const batchNum = i + 2;
+
+      updateProgressStatus(`Submitting batch ${batchNum} of ${totalBatches} (${group.displayName})...`);
+
+      // Check if this single group exceeds the limit
+      const groupSize = calculatePayloadSize([{
+        fileName: group.filename,
+        mimeType: 'application/pdf',
+        content: group.pdf
+      }], stringifyLineItems);
+
+      if (exceedsPayloadLimit(groupSize)) {
+        // Group is too large - fall back to individual file submission with progressive compression
+        console.log(`[ExpenseClaim] Group ${group.displayName} (${formatBytes(groupSize)}) exceeds limit, falling back to individual files`);
+        updateProgressStatus(`Processing ${group.displayName} files individually...`);
+
+        // Get the original files for this account code
+        const attachmentsByCode = collectAttachmentsWithAccountCodes();
+        const groupFiles = attachmentsByCode.get(group.accountCode) || [];
+
+        let individualSuccessCount = 0;
+        let individualFailCount = 0;
+
+        for (let j = 0; j < groupFiles.length; j++) {
+          const { file, expenseType } = groupFiles[j];
+          updateProgressStatus(`Processing ${group.displayName} file ${j + 1} of ${groupFiles.length}...`);
+
+          // Try to process the file with progressive compression
+          const limitBytes = DEFAULT_PAYLOAD_LIMIT_MB * 1024 * 1024;
+          const individualAttachment = await processFileAsIndividualAttachment(file, expenseType, limitBytes * 0.8);
+
+          if (!individualAttachment) {
+            console.warn(`[ExpenseClaim] File ${file.name} could not be compressed to fit limit`);
+            individualFailCount++;
+            continue;
+          }
+
+          // Submit the individual file
+          const individualPayload = {
+            ...formData,
+            varFlowEnvUpload: false,
+            attachments: [{
+              fileName: individualAttachment.fileName,
+              mimeType: individualAttachment.mimeType,
+              content: individualAttachment.content
+            }],
+            batchInfo: {
+              batch: batchNum,
+              totalBatches,
+              type: 'individual-attachment',
+              accountCode: group.accountCode,
+              displayName: group.displayName,
+              originalFile: file.name
+            }
+          };
+
+          const individualResult = await submitSingleBatch(individualPayload, apiUrl, stringifyLineItems);
+          if (individualResult.success) {
+            individualSuccessCount++;
+          } else {
+            individualFailCount++;
+            logError(`Failed to submit individual file ${file.name}`, individualResult.error);
+          }
+        }
+
+        // Track results
+        if (individualSuccessCount > 0) {
+          successCount++;
+        }
+        if (individualFailCount > 0) {
+          failedGroups.push(`${group.displayName} (${individualFailCount}/${groupFiles.length} files failed)`);
+        }
+        continue;
+      }
+
+      const attachmentPayload = {
+        ...formData,
+        varFlowEnvUpload: false,
+        attachments: [{
+          fileName: group.filename,
+          mimeType: 'application/pdf',
+          content: group.pdf
+        }],
+        batchInfo: {
+          batch: batchNum,
+          totalBatches,
+          type: 'attachments',
+          accountCode: group.accountCode,
+          displayName: group.displayName
+        }
+      };
+
+      const batchResult = await submitSingleBatch(attachmentPayload, apiUrl, stringifyLineItems);
+      if (batchResult.success) {
+        successCount++;
+      } else {
+        failedGroups.push(group.displayName);
+        logError(`Failed to submit attachment batch for ${group.displayName}`, batchResult.error);
+      }
+    }
 
     hideProgressOverlay();
 
-    if (!response.ok) {
-      return { success: false, errorType: ERROR_TYPES.SERVER };
+    // Report results
+    if (failedGroups.length > 0) {
+      showWarning(`Some attachment batches failed: ${failedGroups.join(', ')}. ${successCount}/${totalBatches} batches submitted.`, { duration: 10000 });
     }
-    return { success: true };
+
+    // Consider success if main batch succeeded
+    return { success: successCount > 0 };
   } catch (error) {
     logError('Bulk submission failed', error);
     hideProgressOverlay();
