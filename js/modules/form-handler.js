@@ -13,6 +13,55 @@ import { shouldSubmitIndividually, shouldStringifyLineItems } from './config-loa
 import { showSuccess, showError, showWarning } from './toast.js';
 
 /**
+ * Error types for categorizing submission failures
+ */
+const ERROR_TYPES = {
+  OFFLINE: 'offline',
+  NETWORK: 'network',
+  SERVER: 'server',
+  TIMEOUT: 'timeout',
+  UNKNOWN: 'unknown'
+};
+
+/**
+ * Categorizes an error for user-friendly messaging
+ * @param {Error} error - The error to categorize
+ * @returns {string} Error type from ERROR_TYPES
+ */
+function categorizeError(error) {
+  if (!navigator.onLine) {
+    return ERROR_TYPES.OFFLINE;
+  }
+  if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+    return ERROR_TYPES.NETWORK;
+  }
+  if (error.name === 'AbortError' || error.message.includes('timeout')) {
+    return ERROR_TYPES.TIMEOUT;
+  }
+  return ERROR_TYPES.UNKNOWN;
+}
+
+/**
+ * Gets user-friendly error message based on error type
+ * @param {string} errorType - Error type from ERROR_TYPES
+ * @returns {string} User-friendly error message
+ */
+function getErrorMessage(errorType) {
+  switch (errorType) {
+    case ERROR_TYPES.OFFLINE:
+      return 'You appear to be offline. Please check your internet connection and try again.';
+    case ERROR_TYPES.NETWORK:
+      return 'Unable to reach the server. Please check your connection and try again in a few moments.';
+    case ERROR_TYPES.TIMEOUT:
+      return 'The request timed out. The server may be busy - please try again in a few minutes.';
+    case ERROR_TYPES.SERVER:
+      return 'The server encountered an error. Please try again later or contact support if the problem persists.';
+    default:
+      return 'An unexpected error occurred. Please try again or contact support.';
+  }
+}
+
+/**
  * Collects standard expense items from the form.
  * @returns {Promise<Array<object>>} Array of expense items
  */
@@ -218,7 +267,7 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
       logError('PDF generation failed before form submit', err);
       hideProgressOverlay();
       showError('Failed to generate PDF. Submission aborted.');
-      return false;
+      return { success: false, errorType: ERROR_TYPES.UNKNOWN };
     }
 
     // Determine how to send line items based on config
@@ -282,11 +331,15 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
     });
 
     hideProgressOverlay();
-    return response.ok;
+
+    if (!response.ok) {
+      return { success: false, errorType: ERROR_TYPES.SERVER };
+    }
+    return { success: true };
   } catch (error) {
     logError('Bulk submission failed', error);
     hideProgressOverlay();
-    return false;
+    return { success: false, errorType: categorizeError(error), error };
   }
 }
 
@@ -302,6 +355,12 @@ export async function handleFormSubmit(event, config) {
   const form = event.target;
   const apiUrl = config.API_URL;
   const submitButton = form.querySelector('button[type="submit"]');
+
+  // Check for offline status before attempting submission
+  if (!navigator.onLine) {
+    showError(getErrorMessage(ERROR_TYPES.OFFLINE));
+    return;
+  }
 
   try {
     // Show loading state on submit button
@@ -326,11 +385,13 @@ export async function handleFormSubmit(event, config) {
         showSuccess('Successfully submitted all expense line items.');
       }
     } else {
-      success = await submitBulk(expenseItems, vehicleData, formData, apiUrl, config);
-      if (success) {
+      const result = await submitBulk(expenseItems, vehicleData, formData, apiUrl, config);
+      if (result.success) {
         showSuccess('Successfully submitted the expense form.');
+        success = true;
       } else {
-        showError('Failed to submit the expense form. Please try again.');
+        showError(getErrorMessage(result.errorType));
+        success = false;
       }
     }
 
@@ -343,7 +404,8 @@ export async function handleFormSubmit(event, config) {
     }
   } catch (error) {
     logError('Form submission error', error);
-    showError('An unexpected error occurred during submission.');
+    const errorType = categorizeError(error);
+    showError(getErrorMessage(errorType));
     setButtonLoadingWithText(submitButton, false);
   }
 }

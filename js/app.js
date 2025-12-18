@@ -11,11 +11,13 @@ import { handleFormSubmit } from './modules/form-handler.js';
 import { downloadPDF, validatePdfLibraries } from './modules/pdf-generator.js';
 import { logError } from './modules/utils.js';
 import { setupFormValidation } from './modules/validation.js';
+import { showWarning } from './modules/toast.js';
 
 /**
  * Application state
  */
 let appConfig = null;
+let pdfLibrariesAvailable = true;
 
 /**
  * Initializes the application.
@@ -34,6 +36,20 @@ async function initApp() {
       console.log('[ExpenseClaim] PDF libraries validated');
     } catch (err) {
       console.warn('[ExpenseClaim] PDF library warning:', err.message);
+      pdfLibrariesAvailable = false;
+
+      // Show visible warning to user
+      showWarning(
+        'PDF generation is not available. Please refresh the page or contact support if the problem persists.',
+        { duration: 0 } // Don't auto-dismiss
+      );
+
+      // Disable submit button since form can't be submitted without PDF
+      const submitButton = document.querySelector('button[type="submit"]');
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.title = 'PDF libraries not available - cannot submit';
+      }
     }
     
     // Initialize UI
