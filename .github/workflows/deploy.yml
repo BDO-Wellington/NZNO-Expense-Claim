@@ -25,7 +25,7 @@ jobs:
           bun-version: latest
 
       - name: Run tests
-        run: bun test --bail --coverage
+        run: bun test --bail --coverage js/modules/__tests__/ tests/
 
   deploy:
     needs: test
