@@ -565,6 +565,49 @@ globalThis.jspdf = {
   }),
 };
 
+// pdf-lib mock
+const createMockPdfPage = () => ({
+  drawImage: mock(() => {}),
+  drawText: mock(() => {}),
+  getSize: mock(() => ({ width: 595.28, height: 841.89 })),
+});
+
+const createMockPdfDocument = () => {
+  const pages = [];
+  return {
+    addPage: mock((dimensions) => {
+      const page = createMockPdfPage();
+      pages.push(page);
+      return page;
+    }),
+    copyPages: mock(async (srcDoc, indices) => {
+      return indices.map(() => createMockPdfPage());
+    }),
+    embedPng: mock(async () => ({
+      scale: () => ({ width: 100, height: 100 }),
+    })),
+    embedJpg: mock(async () => ({
+      scale: () => ({ width: 100, height: 100 }),
+    })),
+    save: mock(async () => new Uint8Array([0x25, 0x50, 0x44, 0x46])), // %PDF
+    getPageCount: mock(() => pages.length),
+    getPageIndices: mock(() => pages.map((_, i) => i)),
+  };
+};
+
+globalThis.window.PDFLib = {
+  PDFDocument: {
+    create: mock(async () => createMockPdfDocument()),
+    load: mock(async () => {
+      const doc = createMockPdfDocument();
+      // Simulate a loaded document with 1 page
+      doc.getPageIndices = mock(() => [0]);
+      return doc;
+    }),
+  },
+  rgb: mock((r, g, b) => ({ r, g, b })),
+};
+
 // html2pdf mock (chainable API)
 const createHtml2PdfInstance = () => {
   const instance = {

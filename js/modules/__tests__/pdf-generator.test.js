@@ -8,6 +8,7 @@ import {
   getAttachmentsPdfFilename,
   isHtml2PdfAvailable,
   isJsPdfAvailable,
+  isPdfLibAvailable,
   validatePdfLibraries,
 } from '../pdf-generator.js';
 
@@ -161,17 +162,55 @@ describe('isJsPdfAvailable', () => {
   });
 });
 
+describe('isPdfLibAvailable', () => {
+  const originalPDFLib = globalThis.window?.PDFLib;
+
+  afterEach(() => {
+    if (originalPDFLib) {
+      globalThis.window.PDFLib = originalPDFLib;
+    } else {
+      delete globalThis.window.PDFLib;
+    }
+  });
+
+  test('returns true when pdf-lib is available', () => {
+    globalThis.window.PDFLib = { PDFDocument: mock(() => {}) };
+
+    expect(isPdfLibAvailable()).toBe(true);
+  });
+
+  test('returns false when PDFLib is undefined', () => {
+    delete globalThis.window.PDFLib;
+
+    expect(isPdfLibAvailable()).toBe(false);
+  });
+
+  test('returns false when PDFDocument is missing from PDFLib', () => {
+    globalThis.window.PDFLib = {};
+
+    expect(isPdfLibAvailable()).toBe(false);
+  });
+});
+
 describe('validatePdfLibraries', () => {
+  const originalPDFLib = globalThis.window?.PDFLib;
+
   afterEach(() => {
     globalThis.html2pdf = originalHtml2pdf;
     if (originalWindowJspdf) {
       globalThis.window.jspdf = originalWindowJspdf;
     }
+    if (originalPDFLib) {
+      globalThis.window.PDFLib = originalPDFLib;
+    } else {
+      delete globalThis.window.PDFLib;
+    }
   });
 
-  test('does not throw when both libraries available', () => {
+  test('does not throw when all libraries available', () => {
     globalThis.html2pdf = mock(() => {});
     globalThis.window.jspdf = { jsPDF: mock(() => {}) };
+    globalThis.window.PDFLib = { PDFDocument: mock(() => {}) };
 
     expect(() => validatePdfLibraries()).not.toThrow();
   });
@@ -179,6 +218,7 @@ describe('validatePdfLibraries', () => {
   test('throws when html2pdf is missing', () => {
     delete globalThis.html2pdf;
     globalThis.window.jspdf = { jsPDF: mock(() => {}) };
+    globalThis.window.PDFLib = { PDFDocument: mock(() => {}) };
 
     expect(() => validatePdfLibraries()).toThrow('html2pdf library is not loaded');
   });
@@ -186,7 +226,16 @@ describe('validatePdfLibraries', () => {
   test('throws when jsPDF is missing', () => {
     globalThis.html2pdf = mock(() => {});
     delete globalThis.window.jspdf;
+    globalThis.window.PDFLib = { PDFDocument: mock(() => {}) };
 
     expect(() => validatePdfLibraries()).toThrow('jsPDF library is not loaded');
+  });
+
+  test('throws when pdf-lib is missing', () => {
+    globalThis.html2pdf = mock(() => {});
+    globalThis.window.jspdf = { jsPDF: mock(() => {}) };
+    delete globalThis.window.PDFLib;
+
+    expect(() => validatePdfLibraries()).toThrow('pdf-lib library is not loaded');
   });
 });

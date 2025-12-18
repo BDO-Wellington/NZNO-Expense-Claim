@@ -166,72 +166,209 @@ export async function generatePDFBase64() {
 }
 
 /**
- * Merges all attachments into a single PDF document.
+ * Merges all attachments (PDFs and images) into a single PDF document using pdf-lib.
  * @returns {Promise<string|null>} Base64 encoded PDF or null if no attachments
  */
 export async function mergeAttachmentsPDF() {
   try {
     // Collect all files from all file inputs
     const allFiles = [];
-    document.querySelectorAll('input[type=\"file\"]').forEach(input => {
+    document.querySelectorAll('input[type="file"]').forEach(input => {
       if (input.files && input.files.length > 0) {
         for (let i = 0; i < input.files.length; i++) {
           allFiles.push(input.files[i]);
         }
       }
     });
-    
+
     console.log(`[ExpenseClaim] Found ${allFiles.length} attachments to merge.`);
-    
+
     if (allFiles.length === 0) {
       return null;
     }
-    
-    // Check if jsPDF is available
-    const { jsPDF } = window.jspdf || {};
-    if (!jsPDF) {
-      logError('jsPDF library not loaded', null);
+
+    // Check if pdf-lib is available
+    const PDFLib = window.PDFLib;
+    if (!PDFLib) {
+      logError('pdf-lib library not loaded', null);
       return null;
     }
-    
-    const doc = new jsPDF();
-    let firstPage = true;
-    
+
+    const { PDFDocument } = PDFLib;
+
+    // Create a new PDF document to hold all merged content
+    const mergedPdf = await PDFDocument.create();
+
     for (const file of allFiles) {
-      if (!firstPage) {
-        doc.addPage();
-      }
-      firstPage = false;
-      
       try {
-        if (file.type.startsWith('image/')) {
-          // Add image to PDF
-          const imgData = await fileToDataURL(file);
-          doc.addImage(imgData, 'JPEG', 10, 10, 180, 250);
-          doc.text(file.name, 10, 265);
-        } else if (file.type === 'application/pdf') {
-          // For PDF files, just add a placeholder
-          // Full PDF merge would require pdf-lib or similar
-          doc.text(`[PDF Attachment: ${file.name}]`, 10, 20);
-          doc.text('PDF content not embedded', 10, 30);
+        const arrayBuffer = await file.arrayBuffer();
+
+        if (file.type === 'application/pdf') {
+          // Load the PDF and copy all its pages
+          const sourcePdf = await PDFDocument.load(arrayBuffer);
+          const pageIndices = sourcePdf.getPageIndices();
+          const copiedPages = await mergedPdf.copyPages(sourcePdf, pageIndices);
+          copiedPages.forEach(page => mergedPdf.addPage(page));
+          console.log(`[ExpenseClaim] Merged PDF: ${file.name} (${pageIndices.length} pages)`);
+
+        } else if (file.type.startsWith('image/')) {
+          // Embed image on a new page
+          let image;
+          if (file.type === 'image/png') {
+            image = await mergedPdf.embedPng(arrayBuffer);
+          } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+            image = await mergedPdf.embedJpg(arrayBuffer);
+          } else {
+            // For other image types, try to convert via canvas
+            const dataUrl = await fileToDataURL(file);
+            const convertedBuffer = await convertImageToJpegBuffer(dataUrl);
+            if (convertedBuffer) {
+              image = await mergedPdf.embedJpg(convertedBuffer);
+            } else {
+              console.warn(`[ExpenseClaim] Unsupported image type: ${file.type}, skipping ${file.name}`);
+              continue;
+            }
+          }
+
+          // Calculate dimensions to fit on A4 page with margins
+          const pageWidth = 595.28; // A4 width in points
+          const pageHeight = 841.89; // A4 height in points
+          const margin = 40;
+          const maxWidth = pageWidth - (margin * 2);
+          const maxHeight = pageHeight - (margin * 2) - 30; // Extra space for filename
+
+          const imgDims = image.scale(1);
+          let scale = 1;
+          if (imgDims.width > maxWidth || imgDims.height > maxHeight) {
+            const scaleX = maxWidth / imgDims.width;
+            const scaleY = maxHeight / imgDims.height;
+            scale = Math.min(scaleX, scaleY);
+          }
+
+          const scaledWidth = imgDims.width * scale;
+          const scaledHeight = imgDims.height * scale;
+
+          // Center the image on the page
+          const x = (pageWidth - scaledWidth) / 2;
+          const y = (pageHeight - scaledHeight) / 2 + 15; // Offset for filename at bottom
+
+          const page = mergedPdf.addPage([pageWidth, pageHeight]);
+          page.drawImage(image, {
+            x,
+            y,
+            width: scaledWidth,
+            height: scaledHeight
+          });
+
+          // Add filename at bottom of page
+          const { rgb } = PDFLib;
+          page.drawText(file.name, {
+            x: margin,
+            y: 20,
+            size: 10,
+            color: rgb(0.3, 0.3, 0.3)
+          });
+
+          console.log(`[ExpenseClaim] Embedded image: ${file.name}`);
+
         } else {
-          // For other file types, just show filename
-          doc.text(`[File: ${file.name}]`, 10, 20);
-          doc.text(`Type: ${file.type || 'unknown'}`, 10, 30);
+          // For unsupported file types, add a placeholder page
+          const page = mergedPdf.addPage();
+          const { rgb } = PDFLib;
+          page.drawText(`Attachment: ${file.name}`, {
+            x: 50,
+            y: 750,
+            size: 14,
+            color: rgb(0, 0, 0)
+          });
+          page.drawText(`File type: ${file.type || 'unknown'}`, {
+            x: 50,
+            y: 720,
+            size: 12,
+            color: rgb(0.5, 0.5, 0.5)
+          });
+          page.drawText('(Content cannot be embedded)', {
+            x: 50,
+            y: 690,
+            size: 12,
+            color: rgb(0.5, 0.5, 0.5)
+          });
+          console.warn(`[ExpenseClaim] Unsupported file type: ${file.type}, added placeholder for ${file.name}`);
         }
       } catch (err) {
         logError(`Failed to process attachment: ${file.name}`, err);
-        doc.text(`[Error reading file: ${file.name}]`, 10, 20);
+        // Add error page for this file
+        const page = mergedPdf.addPage();
+        const { rgb } = PDFLib;
+        page.drawText(`Error processing: ${file.name}`, {
+          x: 50,
+          y: 750,
+          size: 14,
+          color: rgb(0.8, 0, 0)
+        });
+        page.drawText(`Error: ${err.message || 'Unknown error'}`, {
+          x: 50,
+          y: 720,
+          size: 10,
+          color: rgb(0.5, 0.5, 0.5)
+        });
       }
     }
-    
-    // Convert to base64
-    const pdfOutput = doc.output('datauristring');
-    return pdfOutput.split(',')[1];
+
+    // Save as base64
+    const pdfBytes = await mergedPdf.save();
+    const base64 = uint8ArrayToBase64(pdfBytes);
+    console.log(`[ExpenseClaim] Merged PDF created with ${mergedPdf.getPageCount()} pages.`);
+    return base64;
   } catch (error) {
     logError('Attachment merge failed', error);
     return null;
   }
+}
+
+/**
+ * Converts a Uint8Array to base64 string.
+ * @param {Uint8Array} bytes - Byte array to convert
+ * @returns {string} Base64 encoded string
+ */
+function uint8ArrayToBase64(bytes) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Converts an image (via data URL) to JPEG ArrayBuffer using canvas.
+ * @param {string} dataUrl - Image data URL
+ * @returns {Promise<ArrayBuffer|null>} JPEG data as ArrayBuffer or null on failure
+ */
+function convertImageToJpegBuffer(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            blob.arrayBuffer().then(resolve).catch(() => resolve(null));
+          } else {
+            resolve(null);
+          }
+        }, 'image/jpeg', 0.92);
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
 }
 
 /**
@@ -279,6 +416,14 @@ export function isJsPdfAvailable() {
 }
 
 /**
+ * Checks if pdf-lib library is loaded.
+ * @returns {boolean} True if library is available
+ */
+export function isPdfLibAvailable() {
+  return typeof window.PDFLib !== 'undefined' && typeof window.PDFLib.PDFDocument !== 'undefined';
+}
+
+/**
  * Validates that all required PDF libraries are loaded.
  * @throws {Error} If libraries are not available
  * @returns {void}
@@ -289,5 +434,8 @@ export function validatePdfLibraries() {
   }
   if (!isJsPdfAvailable()) {
     throw new Error('jsPDF library is not loaded');
+  }
+  if (!isPdfLibAvailable()) {
+    throw new Error('pdf-lib library is not loaded');
   }
 }
