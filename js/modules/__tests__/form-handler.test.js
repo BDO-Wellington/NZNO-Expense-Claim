@@ -1,12 +1,27 @@
 /**
  * Form Handler Module Tests (Unit Tests)
  */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, beforeEach } from 'bun:test';
 import {
   buildLineItemsArray,
   collectVehicleData,
   collectFormData,
 } from '../form-handler.js';
+
+// Helper: mock a claimant type radio button in the DOM so getClaimantType() returns the desired value
+const origQuerySelector = document.querySelector.bind(document);
+function mockClaimantType(type) {
+  document.querySelector = function(selector) {
+    if (selector === 'input[name="claimantType"]:checked') {
+      return { value: type };
+    }
+    return origQuerySelector(selector);
+  };
+}
+
+function clearClaimantTypeMock() {
+  document.querySelector = origQuerySelector;
+}
 
 describe('buildLineItemsArray', () => {
   const emptyVehicle = { kms: 0, amount: 0, comment: '' };
@@ -189,7 +204,10 @@ describe('collectVehicleData', () => {
 });
 
 describe('collectFormData', () => {
-  // Note: getClaimantType() defaults to 'member' when no radio buttons in DOM
+  beforeEach(() => {
+    mockClaimantType('member');
+  });
+
   test('extracts basic form data with member defaults', () => {
     const mockForm = {
       fullName: { value: 'John Smith' },
