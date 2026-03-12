@@ -513,6 +513,121 @@ label {
 }
 
 /* ----------------------------------------
+   Wide Details Column (Event/Reason field)
+   ---------------------------------------- */
+.details-col-wide {
+    flex: 1 1 400px;
+    max-width: 500px;
+}
+
+.details-col-wide .form-control {
+    max-width: 480px;
+}
+
+/* ----------------------------------------
+   Claimant Type Radio Group
+   ---------------------------------------- */
+.claimant-type-radios {
+    padding: var(--nzno-spacing-sm) 0;
+}
+
+.claimant-type-radios .custom-control {
+    margin-right: var(--nzno-spacing-md);
+}
+
+/* ----------------------------------------
+   Accommodation & Nights Allowance Rows
+   ---------------------------------------- */
+.accommodation-amount-cell {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.accommodation-inline-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--nzno-gray);
+    white-space: nowrap;
+    margin: 0;
+}
+
+.accommodation-input {
+    width: 80px !important;
+    max-width: 80px !important;
+    display: inline-block;
+}
+
+/* ----------------------------------------
+   Meal Group Rows
+   ---------------------------------------- */
+.meal-note-row {
+    background-color: #fef9e7;
+    border-left: 3px solid #f0c040;
+}
+
+.meal-note-row td {
+    padding: var(--nzno-spacing-sm) var(--nzno-spacing-md) !important;
+}
+
+.meal-sub-item {
+    padding-left: 2rem !important;
+}
+
+/* ----------------------------------------
+   Bank Account Section
+   ---------------------------------------- */
+/* (uses existing .form-section styling) */
+
+/* ----------------------------------------
+   Policy Notes Section
+   ---------------------------------------- */
+.policy-notes {
+    background-color: var(--nzno-light);
+    border-left: 4px solid var(--nzno-purple);
+}
+
+.policy-notes h4 {
+    margin-top: 0;
+    border-bottom-color: var(--nzno-purple);
+}
+
+.policy-notes ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    line-height: 1.7;
+}
+
+.policy-notes ul ul {
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.policy-notes li {
+    margin-bottom: 0.5rem;
+    font-size: 13px;
+    color: var(--nzno-dark);
+}
+
+/* ----------------------------------------
+   Print-Friendly: New Sections
+   ---------------------------------------- */
+.print-friendly .claimant-type-radios .custom-control-input {
+    display: none !important;
+}
+
+.print-friendly .policy-notes {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+}
+
+.print-friendly .meal-note-row {
+    background-color: transparent !important;
+    border-left: none !important;
+}
+
+/* ----------------------------------------
    Responsive Adjustments
    ---------------------------------------- */
 @media (max-width: 768px) {

@@ -577,7 +577,7 @@ export function collectAttachmentsWithAccountCodes() {
 
     if (nameSpan && fileInput && fileInput.files && fileInput.files.length > 0) {
       const expenseType = nameSpan.textContent.trim();
-      const accountCode = getAccountCode(expenseType) || 'UNKNOWN';
+      const accountCode = row.getAttribute('data-account-code') || getAccountCode(expenseType) || 'UNKNOWN';
 
       if (!attachmentsByCode.has(accountCode)) {
         attachmentsByCode.set(accountCode, []);

@@ -270,13 +270,30 @@ describe('handleFormSubmit', () => {
   test('collects form data', async () => {
     expect.assertions(2);
 
+    // Mock claimant type as staff so employeeId is collected
+    const origQS = globalThis.document.querySelector;
+    globalThis.document.querySelector = function(selector) {
+      if (selector === 'input[name="claimantType"]:checked') {
+        return { value: 'staff' };
+      }
+      return origQS.call(this, selector);
+    };
+
     const mockEvent = createMockEvent(
       createMockForm({
         fullName: 'Jane Doe',
         employeeId: 'EMP999',
+        email: 'jane@nzno.org.nz',
         expenseDate: '2025-06-15',
+        eventReason: 'Training',
+        travelStartDate: '2025-06-15T08:00',
+        travelEndDate: '2025-06-15T17:00',
+        numberOfDays: '1',
+        costCentre: '',
+        bankAccountName: 'Jane Doe',
+        bankAccountNumber: '01-0123-0123456-00',
         kms: '0',
-        rate: '1',
+        rate: '1.17',
         vehicleAmount: '0',
         vehicleComment: ''
       })
@@ -291,5 +308,8 @@ describe('handleFormSubmit', () => {
     const payload = getFetchBody();
     expect(payload.fullName).toBe('Jane Doe');
     expect(payload.employeeId).toBe('EMP999');
+
+    // Restore
+    globalThis.document.querySelector = origQS;
   });
 });

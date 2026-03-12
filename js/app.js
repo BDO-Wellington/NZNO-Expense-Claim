@@ -6,12 +6,14 @@
  */
 
 import { loadConfig, showConfigError } from './modules/config-loader.js';
-import { initializeUI, setupEventListeners } from './modules/ui-handlers.js';
+import { initializeUI, setupEventListeners, generateExpenseTable } from './modules/ui-handlers.js';
 import { handleFormSubmit } from './modules/form-handler.js';
 import { downloadPDF, validatePdfLibraries } from './modules/pdf-generator.js';
 import { logError } from './modules/utils.js';
 import { setupFormValidation } from './modules/validation.js';
 import { showWarning } from './modules/toast.js';
+import { setupClaimantTypeToggle, getClaimantType } from './modules/claimant-type.js';
+import { EXPENSE_TYPES } from './modules/expense-types.js';
 
 /**
  * Application state
@@ -29,7 +31,7 @@ async function initApp() {
     console.log('[ExpenseClaim] Loading configuration...');
     appConfig = await loadConfig();
     console.log('[ExpenseClaim] Configuration loaded successfully');
-    
+
     // Validate PDF libraries are available
     try {
       validatePdfLibraries();
@@ -51,10 +53,18 @@ async function initApp() {
         submitButton.title = 'PDF libraries not available - cannot submit';
       }
     }
-    
-    // Initialize UI
+
+    // Initialize UI with current claimant type
     console.log('[ExpenseClaim] Initializing UI...');
-    initializeUI(appConfig);
+    const claimantType = getClaimantType();
+    initializeUI(appConfig, claimantType);
+
+    // Setup claimant type toggle
+    console.log('[ExpenseClaim] Setting up claimant type toggle...');
+    setupClaimantTypeToggle((newType) => {
+      // Regenerate expense table when claimant type changes
+      generateExpenseTable(EXPENSE_TYPES, newType);
+    });
 
     // Setup form validation
     console.log('[ExpenseClaim] Setting up form validation...');
@@ -69,7 +79,7 @@ async function initApp() {
       onSubmit: (event) => handleFormSubmit(event, appConfig),
       onPdfDownload: () => downloadPDF()
     });
-    
+
     console.log('[ExpenseClaim] Application initialized successfully');
   } catch (error) {
     logError('Application initialization failed', error);
