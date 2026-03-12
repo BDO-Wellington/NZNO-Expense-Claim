@@ -807,6 +807,17 @@ label {
         font-size: 15px;
     }
 
+    /* Allow file input text to wrap instead of truncating */
+    input[type="file"],
+    .form-control-file {
+        white-space: normal;
+        word-break: break-word;
+        overflow: visible;
+        text-overflow: unset;
+        height: auto;
+        min-height: 38px;
+    }
+
     /* Header compact on mobile */
     .nzno-header {
         padding: var(--nzno-spacing-sm) var(--nzno-spacing-md);
