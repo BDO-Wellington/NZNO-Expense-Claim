@@ -207,17 +207,19 @@ Best Practices:
 
             <!-- Standard Expenses Table -->
             <h4>Standard Expenses</h4>
-            <table class="table table-bordered" id="StandardExpensesTable">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Amount (NZD)</th>
-                        <th>Notes</th>
-                        <th>Attachment</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-bordered" id="StandardExpensesTable">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount (NZD)</th>
+                            <th>Notes</th>
+                            <th>Attachment</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
 
             <!-- Page break before Private Vehicle section for PDF/Print -->
             <div class="page-break"></div>
@@ -268,24 +270,26 @@ Best Practices:
             <!-- Other Expenses Section -->
             <section class="form-section">
                 <h4>Other Expenses</h4>
-                <table class="table table-bordered" id="otherExpensesTable">
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Amount (NZD)</th>
-                            <th>Attachment</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="otherExpensesBody">
-                        <tr>
-                            <td><input type="text" class="form-control" name="other_description[]" aria-label="Other expense description"></td>
-                            <td><input type="number" class="form-control" name="other_amount[]" step="0.01" aria-label="Other expense amount"></td>
-                            <td><input type="file" class="form-control-file" name="other_attachment[]" multiple aria-label="Other expense attachment"></td>
-                            <td><button type="button" class="btn btn-danger btn-sm" data-action="remove-row">Remove</button></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="otherExpensesTable">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Amount (NZD)</th>
+                                <th>Attachment</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="otherExpensesBody">
+                            <tr>
+                                <td><input type="text" class="form-control" name="other_description[]" aria-label="Other expense description"></td>
+                                <td><input type="number" class="form-control" name="other_amount[]" step="0.01" aria-label="Other expense amount"></td>
+                                <td><input type="file" class="form-control-file" name="other_attachment[]" multiple aria-label="Other expense attachment"></td>
+                                <td><button type="button" class="btn btn-danger btn-sm" data-action="remove-row">Remove</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <button type="button" class="btn btn-secondary mb-3" data-action="add-other-expense">Add Other Expense</button>
             </section>
 

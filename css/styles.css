@@ -518,10 +518,12 @@ label {
 .details-col-wide {
     flex: 1 1 400px;
     max-width: 500px;
+    padding-left: 0 !important;
+    padding-right: 30px !important;
 }
 
 .details-col-wide .form-control {
-    max-width: 480px;
+    max-width: 100%;
 }
 
 /* ----------------------------------------
@@ -644,11 +646,24 @@ label {
 
     .details-row {
         flex-direction: column;
-        gap: 1rem;
+        gap: 0;
+        margin-bottom: var(--nzno-spacing-md);
     }
 
-    .details-col {
+    /* Override grid gutter padding on stacked detail fields */
+    .details-col,
+    .details-col-wide,
+    .details-col.details-col-wide {
         min-width: 100%;
+        max-width: 100%;
+        flex: 0 1 100%;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .details-col .form-control,
+    .details-col-wide .form-control {
+        max-width: 100%;
     }
 
     h2 {
@@ -657,5 +672,151 @@ label {
 
     h4 {
         font-size: 16px;
+    }
+
+    .container {
+        padding: var(--nzno-spacing-md);
+    }
+
+    .form-section {
+        padding: var(--nzno-spacing-md);
+    }
+
+    .table th,
+    .table td {
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    .policy-notes {
+        padding: var(--nzno-spacing-md);
+    }
+
+    .policy-notes ul {
+        padding-left: 1.25rem;
+    }
+}
+
+/* ----------------------------------------
+   Mobile Phone Adjustments (576px and below)
+   ---------------------------------------- */
+@media (max-width: 576px) {
+    /* Touch-friendly input sizing - 16px font prevents iOS auto-zoom */
+    .form-control {
+        height: 44px;
+        font-size: 16px;
+        padding: 10px 12px;
+    }
+
+    select.form-control {
+        height: 44px;
+        font-size: 16px;
+    }
+
+    /* Larger radio/checkbox touch targets */
+    .custom-control {
+        min-height: 2.5rem;
+        padding-left: 2.25rem;
+    }
+
+    .custom-control-label::before,
+    .custom-control-label::after {
+        width: 1.5rem;
+        height: 1.5rem;
+        left: -2.25rem;
+    }
+
+    .custom-control-label {
+        padding-top: 0.125rem;
+        font-size: 15px;
+    }
+
+    /* Full-width buttons */
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+
+    .btn-sm {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    /* Stack action buttons vertically */
+    .mt-4.text-center {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .mt-4.text-center .btn {
+        width: 100%;
+    }
+
+    /* Table cells tighter on mobile */
+    .table th,
+    .table td {
+        padding: 0.4rem 0.5rem !important;
+        font-size: 13px;
+    }
+
+    /* Ensure table inputs stay usable within scroll container */
+    .table td .form-control,
+    .table td input[type="number"],
+    .table td input[type="text"] {
+        min-width: 120px;
+        font-size: 14px;
+        height: 38px;
+    }
+
+    .table td input[type="file"],
+    .table td .form-control-file {
+        min-width: 140px;
+        font-size: 13px;
+    }
+
+    /* Accommodation inline layout stacks on mobile */
+    .accommodation-amount-cell {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .accommodation-input {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Meal sub-items less indented on mobile */
+    .meal-sub-item {
+        padding-left: 1rem !important;
+    }
+
+    /* Policy notes readable on mobile */
+    .policy-notes li {
+        font-size: 14px;
+    }
+
+    /* Smaller headings */
+    h2 {
+        font-size: 18px;
+    }
+
+    h4 {
+        font-size: 15px;
+    }
+
+    /* Header compact on mobile */
+    .nzno-header {
+        padding: var(--nzno-spacing-sm) var(--nzno-spacing-md);
+    }
+
+    .nzno-logo-text {
+        font-size: 22px;
+    }
+
+    .nzno-header-title {
+        font-size: 15px;
     }
 }
