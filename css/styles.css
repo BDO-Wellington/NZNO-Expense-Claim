@@ -257,7 +257,6 @@ label {
 .table {
     background-color: var(--nzno-white);
     border-radius: var(--nzno-radius);
-    overflow: hidden;
 }
 
 .table thead th {
@@ -293,6 +292,7 @@ label {
     border: 1px solid var(--nzno-border);
     border-radius: var(--nzno-radius-lg);
     padding: var(--nzno-spacing-lg);
+    margin-top: var(--nzno-spacing-lg);
     margin-bottom: var(--nzno-spacing-lg);
     box-shadow: var(--nzno-shadow-light);
 }

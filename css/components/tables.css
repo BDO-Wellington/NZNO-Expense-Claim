@@ -95,6 +95,34 @@
   margin-bottom: 0;
 }
 
+/* Always show scrollbar on mobile so users know they can scroll */
+@media (max-width: 768px) {
+  .table-responsive {
+    overflow-x: scroll;
+  }
+
+  /* Webkit (Chrome, Safari, Edge) */
+  .table-responsive::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .table-responsive::-webkit-scrollbar-track {
+    background: var(--nzno-light, #f6f6f6);
+    border-radius: 4px;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: var(--nzno-gray, #848587);
+    border-radius: 4px;
+  }
+
+  /* Firefox */
+  .table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: var(--nzno-gray, #848587) var(--nzno-light, #f6f6f6);
+  }
+}
+
 @media (max-width: 575.98px) {
   .table-responsive-sm {
     display: block;
