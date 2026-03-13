@@ -154,7 +154,7 @@ describe('updateVehicleAmount', () => {
     globalThis.document.getElementById = originalGetElementById;
   });
 
-  test('updates vehicle amount input with calculated value', () => {
+  test('updates vehicle amount input with calculated value (petrol default)', () => {
     const mockInput = { value: '' };
     globalThis.document.getElementById = mock((id) => {
       if (id === 'vehicleAmount') return mockInput;
@@ -163,7 +163,20 @@ describe('updateVehicleAmount', () => {
 
     updateVehicleAmount(100);
 
-    expect(mockInput.value).toBe('104.00');
+    // Default vehicle type is petrol at $1.17/km
+    expect(mockInput.value).toBe('117.00');
+  });
+
+  test('updates vehicle amount with explicit vehicle type', () => {
+    const mockInput = { value: '' };
+    globalThis.document.getElementById = mock((id) => {
+      if (id === 'vehicleAmount') return mockInput;
+      return null;
+    });
+
+    updateVehicleAmount(100, 'diesel');
+
+    expect(mockInput.value).toBe('126.00');
   });
 
   test('handles zero kilometres', () => {
@@ -181,7 +194,8 @@ describe('updateVehicleAmount', () => {
 
     updateVehicleAmount(50.5);
 
-    expect(mockInput.value).toBe('52.52');
+    // 50.5 * 1.17 = 59.085 (floating point: 59.084999...)
+    expect(mockInput.value).toBe('59.08');
   });
 
   test('handles missing vehicle amount input', () => {

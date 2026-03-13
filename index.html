@@ -16,6 +16,7 @@ Best Practices:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>Expense Claim Submission Form</title>
     
     <!-- Start Single Page Apps for GitHub Pages -->
@@ -83,16 +84,38 @@ Best Practices:
         </div>
         <!-- Expense Claim Form -->
         <form id="expenseForm" autocomplete="off" aria-label="Expense Claim Form">
-            <!-- Two-column layout for details -->
+
+            <!-- Claimant Type Selection -->
+            <section class="form-section" id="claimantTypeSection">
+                <h4>I am a...</h4>
+                <div class="claimant-type-radios d-flex gap-3 flex-wrap">
+                    <div class="custom-control custom-radio">
+                        <input type="radio" class="custom-control-input" id="claimantStaff" name="claimantType" value="staff">
+                        <label class="custom-control-label" for="claimantStaff">Staff</label>
+                    </div>
+                    <div class="custom-control custom-radio">
+                        <input type="radio" class="custom-control-input" id="claimantMember" name="claimantType" value="member" checked>
+                        <label class="custom-control-label" for="claimantMember">Member</label>
+                    </div>
+                    <div class="custom-control custom-radio">
+                        <input type="radio" class="custom-control-input" id="claimantOther" name="claimantType" value="other">
+                        <label class="custom-control-label" for="claimantOther">Other</label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Claimant Details -->
             <div class="details-row">
                 <div class="details-col">
                     <section class="form-group">
                         <label for="fullName">Full Name <span class="required-indicator">*</span></label>
                         <input type="text" class="form-control" id="fullName" name="fullName" required aria-required="true">
                     </section>
+                </div>
+                <div class="details-col">
                     <section class="form-group">
-                        <label for="employeeId">Employee ID <span class="required-indicator">*</span></label>
-                        <input type="text" class="form-control" id="employeeId" name="employeeId" required aria-required="true">
+                        <label for="email">Email Address <span class="required-indicator">*</span></label>
+                        <input type="email" class="form-control" id="email" name="email" required aria-required="true">
                     </section>
                 </div>
                 <div class="details-col">
@@ -103,18 +126,101 @@ Best Practices:
                 </div>
             </div>
 
+            <!-- Conditional fields: Member -->
+            <div id="memberFields">
+                <div class="details-row">
+                    <div class="details-col">
+                        <section class="form-group">
+                            <label for="membershipNumber">Membership Number <span class="required-indicator">*</span></label>
+                            <input type="text" class="form-control" id="membershipNumber" name="membershipNumber" aria-required="true">
+                        </section>
+                    </div>
+                    <div class="details-col">
+                        <section class="form-group">
+                            <label for="nznoStaffContactMember">NZNO Staff Contact <span class="required-indicator">*</span></label>
+                            <input type="text" class="form-control" id="nznoStaffContactMember" name="nznoStaffContact" aria-required="true">
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conditional fields: Staff -->
+            <div id="staffFields" class="d-none">
+                <div class="details-row">
+                    <div class="details-col">
+                        <section class="form-group">
+                            <label for="employeeId">Employee ID <span class="required-indicator">*</span></label>
+                            <input type="text" class="form-control" id="employeeId" name="employeeId" aria-required="true">
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conditional fields: Other -->
+            <div id="otherFields" class="d-none">
+                <div class="details-row">
+                    <div class="details-col">
+                        <section class="form-group">
+                            <label for="nznoStaffContactOther">NZNO Staff Contact <span class="required-indicator">*</span></label>
+                            <input type="text" class="form-control" id="nznoStaffContactOther" name="nznoStaffContact" aria-required="true">
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Travel & Event Details -->
+            <div class="details-row">
+                <div class="details-col details-col-wide">
+                    <section class="form-group">
+                        <label for="eventReason">Event / Reason for Claim <span class="required-indicator">*</span></label>
+                        <input type="text" class="form-control" id="eventReason" name="eventReason" required aria-required="true">
+                    </section>
+                </div>
+                <div class="details-col">
+                    <section class="form-group">
+                        <label for="costCentre">Cost Centre Code</label>
+                        <input type="text" class="form-control" id="costCentre" name="costCentre">
+                    </section>
+                </div>
+            </div>
+
+            <div class="details-row">
+                <div class="details-col">
+                    <section class="form-group">
+                        <label for="travelStartDate">Travel Start Date &amp; Time <span class="required-indicator">*</span></label>
+                        <input type="datetime-local" class="form-control" id="travelStartDate" name="travelStartDate" required aria-required="true">
+                    </section>
+                </div>
+                <div class="details-col">
+                    <section class="form-group">
+                        <label for="travelEndDate">Travel End Date &amp; Time <span class="required-indicator">*</span></label>
+                        <input type="datetime-local" class="form-control" id="travelEndDate" name="travelEndDate" required aria-required="true">
+                    </section>
+                </div>
+                <div class="details-col">
+                    <section class="form-group">
+                        <label for="numberOfDays">Number of Days</label>
+                        <input type="number" class="form-control" id="numberOfDays" name="numberOfDays" step="0.5" min="0">
+                        <small class="form-text text-muted" id="daysAutoCalcNote">Auto-calculated from travel dates. Edit to override.</small>
+                    </section>
+                </div>
+            </div>
+
             <!-- Standard Expenses Table -->
             <h4>Standard Expenses</h4>
-            <table class="table table-bordered" id="StandardExpensesTable">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Amount (NZD)</th>
-                        <th>Attachment</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-bordered" id="StandardExpensesTable">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount (NZD)</th>
+                            <th>Notes</th>
+                            <th>Attachment</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
 
             <!-- Page break before Private Vehicle section for PDF/Print -->
             <div class="page-break"></div>
@@ -124,14 +230,23 @@ Best Practices:
                 <h4>Private Vehicle</h4>
                 <div class="form-row">
                     <div class="form-group col-md-3">
+                        <label for="vehicleType">Vehicle Type</label>
+                        <select class="form-control" id="vehicleType" name="vehicleType">
+                            <option value="petrol">Petrol ($1.17/km)</option>
+                            <option value="diesel">Diesel ($1.26/km)</option>
+                            <option value="hybrid">Hybrid ($0.86/km)</option>
+                            <option value="electric">Electric ($1.08/km)</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-2">
                         <label for="kms">Kilometres</label>
                         <input type="number" class="form-control" id="kms" name="kms" step="0.01">
                     </div>
-                    <div class="form-group col-md-3">
+                    <div class="form-group col-md-2">
                         <label for="rate">Rate (NZD/km)</label>
-                        <input type="number" class="form-control" id="rate" name="rate" value="1.04" readonly>
+                        <input type="number" class="form-control" id="rate" name="rate" value="1.17" readonly>
                     </div>
-                    <div class="form-group col-md-3">
+                    <div class="form-group col-md-2">
                         <label for="vehicleAmount">Amount (NZD)</label>
                         <input type="number" class="form-control" id="vehicleAmount" name="vehicleAmount" readonly>
                     </div>
@@ -140,31 +255,97 @@ Best Practices:
                         <input type="text" class="form-control" id="vehicleComment" name="vehicleComment">
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="travelledFrom">Travelled From <span class="required-indicator">*</span></label>
+                        <input type="text" class="form-control" id="travelledFrom" name="travelledFrom" aria-label="Departure location">
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="travelledTo">Travelled To <span class="required-indicator">*</span></label>
+                        <input type="text" class="form-control" id="travelledTo" name="travelledTo" aria-label="Destination location">
+                    </div>
+                </div>
+                <small class="form-text text-muted">Use of private vehicle must be approved prior to travel. Mileage claims are limited to the rental equivalent of $165 per day for all vehicle types.</small>
             </section>
 
             <!-- Other Expenses Section -->
             <section class="form-section">
                 <h4>Other Expenses</h4>
-                <table class="table table-bordered" id="otherExpensesTable">
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Amount (NZD)</th>
-                            <th>Attachment</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="otherExpensesBody">
-                        <tr>
-                            <td><input type="text" class="form-control" name="other_description[]" aria-label="Other expense description"></td>
-                            <td><input type="number" class="form-control" name="other_amount[]" step="0.01" aria-label="Other expense amount"></td>
-                            <td><input type="file" class="form-control-file" name="other_attachment[]" multiple aria-label="Other expense attachment"></td>
-                            <td><button type="button" class="btn btn-danger btn-sm" data-action="remove-row">Remove</button></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="otherExpensesTable">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Amount (NZD)</th>
+                                <th>Attachment</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="otherExpensesBody">
+                            <tr>
+                                <td><input type="text" class="form-control" name="other_description[]" aria-label="Other expense description"></td>
+                                <td><input type="number" class="form-control" name="other_amount[]" step="0.01" aria-label="Other expense amount"></td>
+                                <td><input type="file" class="form-control-file" name="other_attachment[]" multiple aria-label="Other expense attachment"></td>
+                                <td><button type="button" class="btn btn-danger btn-sm" data-action="remove-row">Remove</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <button type="button" class="btn btn-secondary mb-3" data-action="add-other-expense">Add Other Expense</button>
             </section>
+
+            <!-- Bank Account Details -->
+            <section class="form-section">
+                <h4>Bank Account Details</h4>
+                <div class="details-row">
+                    <div class="details-col">
+                        <section class="form-group">
+                            <label for="bankAccountName">Bank Account Name <span class="required-indicator">*</span></label>
+                            <input type="text" class="form-control" id="bankAccountName" name="bankAccountName" required aria-required="true">
+                        </section>
+                    </div>
+                    <div class="details-col">
+                        <section class="form-group">
+                            <label for="bankAccountNumber">Bank Account Number <span class="required-indicator">*</span></label>
+                            <input type="text" class="form-control" id="bankAccountNumber" name="bankAccountNumber" required aria-required="true" placeholder="XX-XXXX-XXXXXXX-XX">
+                        </section>
+                    </div>
+                </div>
+                <section class="form-group">
+                    <label for="bankScreenshot">Bank Account Screenshot</label>
+                    <input type="file" class="form-control-file" id="bankScreenshot" name="bankScreenshot" accept="image/*,.pdf">
+                    <small class="form-text text-muted">Required if this is your first expense claim, or you are providing us a different bank account number from previous claims.</small>
+                </section>
+            </section>
+
+            <!-- General Notes / Policy -->
+            <section class="form-section policy-notes">
+                <h4>Important Information</h4>
+                <ul>
+                    <li>To help avoid members paying out of pocket, NZNO encourages the use of suppliers we already have invoice arrangements with.</li>
+                    <li>NZNO does not reimburse infringement fees such as traffic or parking fines incurred while on NZNO business.</li>
+                    <li>All purchases must be supported by a sales/eftpos receipt showing the supplier GST number (if applicable) and details of items purchased.</li>
+                    <li>Claims submitted are required to be approved before they are paid. NZNO generally pays claims within one week of approval of the claim by an approver with NZNO financial authority.</li>
+                    <li><strong>Meals:</strong>
+                        <ul>
+                            <li>The maximum daily rate for meals is determined by the start and end time of travel, and whether food is provided (in the case of a conference or meeting). The maximum daily claim for meals is $100 for a full day away from home.</li>
+                            <li>If travelling away for only one day, a claim can be made for breakfast if departure from home base is before 7AM and dinner only if you are unable to return to home base before 7.30PM. Breakfast and dinner may be claimed when away from home base overnight.</li>
+                            <li>NZNO does not reimburse the cost of alcohol.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Mileage:</strong>
+                        <ul>
+                            <li>Use of private vehicle must be approved prior to travel.</li>
+                            <li>Mileage claims are limited to the rental equivalent of $165 per day for all vehicle types.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <div class="phone-field" aria-hidden="true">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" tabindex="-1" autocomplete="off">
+            </div>
 
             <button type="submit" class="btn btn-primary">Submit Claim</button>
         </form>

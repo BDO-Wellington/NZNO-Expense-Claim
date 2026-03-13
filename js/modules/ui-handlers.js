@@ -5,38 +5,260 @@
  * Date: October 28, 2025
  */
 
-import { calculateVehicleAmount, EXPENSE_TYPES } from './expense-types.js';
+import { calculateVehicleAmount, EXPENSE_TYPES, STAFF_ONLY_EXPENSES, VEHICLE_RATES, DEFAULT_VEHICLE_TYPE, getVehicleRate } from './expense-types.js';
 import { formatDate, getTodayDate } from './utils.js';
 import { showDeleteConfirm } from './modal.js';
 
+// ============================================
+// Standard Expenses Table Generation
+// ============================================
+
 /**
- * Generates the standard expenses table rows dynamically.
- * @param {Array<{name: string, accountCode: string}>} expenseTypes - Array of expense types
+ * Generates the standard expenses table rows dynamically based on renderType.
+ * @param {Array} expenseTypes - Array of expense type definitions
+ * @param {string} [claimantType='member'] - Current claimant type for staff-only rows
  * @returns {void}
  */
-export function generateExpenseTable(expenseTypes) {
+export function generateExpenseTable(expenseTypes, claimantType = 'member') {
   const tableBody = document.querySelector('#StandardExpensesTable tbody');
   if (!tableBody) return;
 
   // Clear existing rows safely
   tableBody.textContent = '';
 
-  expenseTypes.forEach(type => {
-    const fieldName = type.name.toLowerCase().replace(/\s+/g, '');
+  // Determine which types to render
+  let typesToRender = [...expenseTypes];
+  if (claimantType === 'staff') {
+    typesToRender = [...typesToRender, ...STAFF_ONLY_EXPENSES];
+  }
 
-    // Create row
+  typesToRender.forEach(type => {
+    switch (type.renderType) {
+      case 'accommodation':
+        renderAccommodationRow(tableBody, type);
+        break;
+      case 'meal-group':
+        renderMealGroupRows(tableBody, type);
+        break;
+      case 'nights-allowance':
+        renderNightsAllowanceRow(tableBody, type);
+        break;
+      case 'standard':
+      default:
+        renderStandardRow(tableBody, type);
+        break;
+    }
+  });
+}
+
+/**
+ * Renders a standard expense row (amount + notes + attachment).
+ * @param {HTMLElement} tableBody - Table body element
+ * @param {object} type - Expense type definition
+ * @returns {void}
+ */
+function renderStandardRow(tableBody, type) {
+  const fieldName = type.name.toLowerCase().replace(/\s+/g, '');
+  const row = document.createElement('tr');
+  row.setAttribute('data-account-code', type.accountCode);
+  row.setAttribute('data-render-type', 'standard');
+
+  // Description cell
+  const descCell = document.createElement('td');
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'expense-name';
+  nameSpan.textContent = type.name;
+  descCell.appendChild(nameSpan);
+  if (type.note) {
+    const noteSpan = document.createElement('small');
+    noteSpan.className = 'form-text text-muted';
+    noteSpan.textContent = ` (${type.note})`;
+    descCell.appendChild(noteSpan);
+  }
+
+  // Amount cell
+  const amountCell = document.createElement('td');
+  const amountInput = document.createElement('input');
+  amountInput.type = 'number';
+  amountInput.className = 'form-control';
+  amountInput.name = `${fieldName}Amount`;
+  amountInput.step = '0.01';
+  amountInput.placeholder = '0.00';
+  amountInput.setAttribute('aria-label', `${type.name} amount`);
+  amountCell.appendChild(amountInput);
+
+  // Notes cell
+  const notesCell = document.createElement('td');
+  const notesInput = document.createElement('input');
+  notesInput.type = 'text';
+  notesInput.className = 'form-control';
+  notesInput.name = `${fieldName}Notes`;
+  notesInput.placeholder = 'Optional';
+  notesInput.setAttribute('aria-label', `${type.name} notes`);
+  notesCell.appendChild(notesInput);
+
+  // Attachment cell
+  const attachCell = document.createElement('td');
+  const attachInput = document.createElement('input');
+  attachInput.type = 'file';
+  attachInput.className = 'form-control-file';
+  attachInput.name = `${fieldName}Attachments`;
+  attachInput.multiple = true;
+  attachInput.setAttribute('aria-label', `${type.name} attachment`);
+  attachCell.appendChild(attachInput);
+
+  row.appendChild(descCell);
+  row.appendChild(amountCell);
+  row.appendChild(notesCell);
+  row.appendChild(attachCell);
+  tableBody.appendChild(row);
+
+  disableScrollOnInput(amountInput);
+}
+
+/**
+ * Renders the accommodation row with nights x price per night calculation.
+ * @param {HTMLElement} tableBody - Table body element
+ * @param {object} type - Expense type definition
+ * @returns {void}
+ */
+function renderAccommodationRow(tableBody, type) {
+  const row = document.createElement('tr');
+  row.setAttribute('data-account-code', type.accountCode);
+  row.setAttribute('data-render-type', 'accommodation');
+
+  // Description cell
+  const descCell = document.createElement('td');
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'expense-name';
+  nameSpan.textContent = type.name;
+  descCell.appendChild(nameSpan);
+
+  // Amount cell - contains nights, price per night, and calculated total
+  const amountCell = document.createElement('td');
+  amountCell.className = 'accommodation-amount-cell';
+
+  const nightsLabel = document.createElement('label');
+  nightsLabel.textContent = 'Nights: ';
+  nightsLabel.className = 'accommodation-inline-label';
+  const nightsInput = document.createElement('input');
+  nightsInput.type = 'number';
+  nightsInput.className = 'form-control form-control-sm accommodation-input';
+  nightsInput.name = 'accommodationNights';
+  nightsInput.min = '0';
+  nightsInput.step = '1';
+  nightsInput.placeholder = '0';
+  nightsInput.setAttribute('aria-label', 'Number of nights');
+
+  const priceLabel = document.createElement('label');
+  priceLabel.textContent = ' x $/Night: ';
+  priceLabel.className = 'accommodation-inline-label';
+  const priceInput = document.createElement('input');
+  priceInput.type = 'number';
+  priceInput.className = 'form-control form-control-sm accommodation-input';
+  priceInput.name = 'accommodationPricePerNight';
+  priceInput.step = '0.01';
+  priceInput.placeholder = '0.00';
+  priceInput.setAttribute('aria-label', 'Price per night');
+
+  const equalsSpan = document.createElement('span');
+  equalsSpan.textContent = ' = $';
+  equalsSpan.className = 'accommodation-inline-label';
+  const totalInput = document.createElement('input');
+  totalInput.type = 'number';
+  totalInput.className = 'form-control form-control-sm accommodation-input';
+  totalInput.name = 'accommodationAmount';
+  totalInput.readOnly = true;
+  totalInput.placeholder = '0.00';
+  totalInput.setAttribute('aria-label', 'Accommodation total amount');
+
+  amountCell.appendChild(nightsLabel);
+  amountCell.appendChild(nightsInput);
+  amountCell.appendChild(priceLabel);
+  amountCell.appendChild(priceInput);
+  amountCell.appendChild(equalsSpan);
+  amountCell.appendChild(totalInput);
+
+  // Auto-calculate total
+  const calcTotal = () => {
+    const nights = parseFloat(nightsInput.value) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+    totalInput.value = (nights * price).toFixed(2);
+  };
+  nightsInput.addEventListener('input', calcTotal);
+  priceInput.addEventListener('input', calcTotal);
+
+  // Notes cell
+  const notesCell = document.createElement('td');
+  const notesInput = document.createElement('input');
+  notesInput.type = 'text';
+  notesInput.className = 'form-control';
+  notesInput.name = 'accommodationNotes';
+  notesInput.placeholder = 'Optional';
+  notesInput.setAttribute('aria-label', 'Accommodation notes');
+  notesCell.appendChild(notesInput);
+
+  // Attachment cell
+  const attachCell = document.createElement('td');
+  const attachInput = document.createElement('input');
+  attachInput.type = 'file';
+  attachInput.className = 'form-control-file';
+  attachInput.name = 'accommodationAttachments';
+  attachInput.multiple = true;
+  attachInput.setAttribute('aria-label', 'Accommodation attachment');
+  attachCell.appendChild(attachInput);
+
+  row.appendChild(descCell);
+  row.appendChild(amountCell);
+  row.appendChild(notesCell);
+  row.appendChild(attachCell);
+  tableBody.appendChild(row);
+
+  disableScrollOnInput(nightsInput);
+  disableScrollOnInput(priceInput);
+}
+
+/**
+ * Renders the meal group: a note banner row + Breakfast/Lunch/Dinner sub-rows.
+ * @param {HTMLElement} tableBody - Table body element
+ * @param {object} type - Expense type definition with subItems and maxNote
+ * @returns {void}
+ */
+function renderMealGroupRows(tableBody, type) {
+  // Note banner row
+  if (type.maxNote) {
+    const noteRow = document.createElement('tr');
+    noteRow.className = 'meal-note-row';
+    const noteCell = document.createElement('td');
+    noteCell.colSpan = 4;
+    const noteText = document.createElement('small');
+    noteText.className = 'text-muted';
+    noteText.textContent = `Meals ${type.maxNote}`;
+    noteCell.appendChild(noteText);
+    noteRow.appendChild(noteCell);
+    tableBody.appendChild(noteRow);
+  }
+
+  // Sub-rows for each meal type
+  type.subItems.forEach(subItem => {
+    const fieldName = subItem.name.toLowerCase();
     const row = document.createElement('tr');
+    row.setAttribute('data-account-code', subItem.accountCode);
+    row.setAttribute('data-render-type', 'meal-item');
 
-    // Description cell with name and account code
+    // Description cell (indented)
     const descCell = document.createElement('td');
+    descCell.className = 'meal-sub-item';
     const nameSpan = document.createElement('span');
     nameSpan.className = 'expense-name';
-    nameSpan.textContent = type.name;
-    const codeSpan = document.createElement('span');
-    codeSpan.className = 'expense-code';
-    codeSpan.textContent = ` (${type.accountCode})`;
+    nameSpan.textContent = subItem.name;
     descCell.appendChild(nameSpan);
-    descCell.appendChild(codeSpan);
+    if (subItem.maxAmount) {
+      const maxSpan = document.createElement('small');
+      maxSpan.className = 'form-text text-muted';
+      maxSpan.textContent = ` (max $${subItem.maxAmount})`;
+      descCell.appendChild(maxSpan);
+    }
 
     // Amount cell
     const amountCell = document.createElement('td');
@@ -46,8 +268,18 @@ export function generateExpenseTable(expenseTypes) {
     amountInput.name = `${fieldName}Amount`;
     amountInput.step = '0.01';
     amountInput.placeholder = '0.00';
-    amountInput.setAttribute('aria-label', `${type.name} amount`);
+    amountInput.setAttribute('aria-label', `${subItem.name} amount`);
     amountCell.appendChild(amountInput);
+
+    // Notes cell
+    const notesCell = document.createElement('td');
+    const notesInput = document.createElement('input');
+    notesInput.type = 'text';
+    notesInput.className = 'form-control';
+    notesInput.name = `${fieldName}Notes`;
+    notesInput.placeholder = 'Optional';
+    notesInput.setAttribute('aria-label', `${subItem.name} notes`);
+    notesCell.appendChild(notesInput);
 
     // Attachment cell
     const attachCell = document.createElement('td');
@@ -56,18 +288,99 @@ export function generateExpenseTable(expenseTypes) {
     attachInput.className = 'form-control-file';
     attachInput.name = `${fieldName}Attachments`;
     attachInput.multiple = true;
-    attachInput.setAttribute('aria-label', `${type.name} attachment`);
+    attachInput.setAttribute('aria-label', `${subItem.name} attachment`);
     attachCell.appendChild(attachInput);
 
     row.appendChild(descCell);
     row.appendChild(amountCell);
+    row.appendChild(notesCell);
     row.appendChild(attachCell);
     tableBody.appendChild(row);
 
-    // Disable scroll wheel on number input
     disableScrollOnInput(amountInput);
   });
 }
+
+/**
+ * Renders the nights allowance row (staff only) with nights x rate calculation.
+ * @param {HTMLElement} tableBody - Table body element
+ * @param {object} type - Expense type definition with ratePerNight
+ * @returns {void}
+ */
+function renderNightsAllowanceRow(tableBody, type) {
+  const row = document.createElement('tr');
+  row.setAttribute('data-account-code', type.accountCode);
+  row.setAttribute('data-render-type', 'nights-allowance');
+
+  // Description cell
+  const descCell = document.createElement('td');
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'expense-name';
+  nameSpan.textContent = type.name;
+  const rateNote = document.createElement('small');
+  rateNote.className = 'form-text text-muted';
+  rateNote.textContent = ` ($${type.ratePerNight}/night)`;
+  descCell.appendChild(nameSpan);
+  descCell.appendChild(rateNote);
+
+  // Amount cell - nights input + calculated total
+  const amountCell = document.createElement('td');
+  amountCell.className = 'accommodation-amount-cell';
+
+  const nightsLabel = document.createElement('label');
+  nightsLabel.textContent = 'Nights: ';
+  nightsLabel.className = 'accommodation-inline-label';
+  const nightsInput = document.createElement('input');
+  nightsInput.type = 'number';
+  nightsInput.className = 'form-control form-control-sm accommodation-input';
+  nightsInput.name = 'overnightAllowanceNights';
+  nightsInput.min = '0';
+  nightsInput.step = '1';
+  nightsInput.placeholder = '0';
+  nightsInput.setAttribute('aria-label', 'Number of nights for overnight allowance');
+
+  const equalsSpan = document.createElement('span');
+  equalsSpan.textContent = ` x $${type.ratePerNight} = $`;
+  equalsSpan.className = 'accommodation-inline-label';
+  const totalInput = document.createElement('input');
+  totalInput.type = 'number';
+  totalInput.className = 'form-control form-control-sm accommodation-input';
+  totalInput.name = 'overnightAllowanceAmount';
+  totalInput.readOnly = true;
+  totalInput.placeholder = '0.00';
+  totalInput.setAttribute('aria-label', 'Overnight allowance total');
+
+  amountCell.appendChild(nightsLabel);
+  amountCell.appendChild(nightsInput);
+  amountCell.appendChild(equalsSpan);
+  amountCell.appendChild(totalInput);
+
+  // Auto-calculate total
+  nightsInput.addEventListener('input', () => {
+    const nights = parseFloat(nightsInput.value) || 0;
+    totalInput.value = (nights * type.ratePerNight).toFixed(2);
+  });
+
+  // Notes cell (empty for allowance)
+  const notesCell = document.createElement('td');
+  notesCell.textContent = '';
+
+  // Attachment cell (empty for allowance)
+  const attachCell = document.createElement('td');
+  attachCell.textContent = '';
+
+  row.appendChild(descCell);
+  row.appendChild(amountCell);
+  row.appendChild(notesCell);
+  row.appendChild(attachCell);
+  tableBody.appendChild(row);
+
+  disableScrollOnInput(nightsInput);
+}
+
+// ============================================
+// Other Expenses
+// ============================================
 
 /**
  * Adds a new row to the Other Expenses table with animation.
@@ -169,18 +482,139 @@ export async function removeExpenseRow(button) {
   }, 200);
 }
 
+// ============================================
+// Vehicle Section
+// ============================================
+
 /**
- * Updates the vehicle amount based on kilometres input.
+ * Updates the vehicle amount based on kilometres and vehicle type.
  * @param {number} kilometres - Number of kilometres
+ * @param {string} [vehicleType] - Vehicle type key
  * @returns {void}
  */
-export function updateVehicleAmount(kilometres) {
+export function updateVehicleAmount(kilometres, vehicleType) {
   const vehicleAmountInput = document.getElementById('vehicleAmount');
   if (vehicleAmountInput) {
-    const amount = calculateVehicleAmount(kilometres);
+    const type = vehicleType || getSelectedVehicleType();
+    const amount = calculateVehicleAmount(kilometres, type);
     vehicleAmountInput.value = amount.toFixed(2);
   }
 }
+
+/**
+ * Gets the currently selected vehicle type from the dropdown.
+ * @returns {string} Vehicle type key
+ */
+export function getSelectedVehicleType() {
+  const select = document.getElementById('vehicleType');
+  return select ? select.value : DEFAULT_VEHICLE_TYPE;
+}
+
+/**
+ * Sets up vehicle type dropdown change handler.
+ * Updates rate display and recalculates amount when vehicle type changes.
+ * @returns {void}
+ */
+export function setupVehicleTypeDropdown() {
+  const vehicleTypeSelect = document.getElementById('vehicleType');
+  const rateInput = document.getElementById('rate');
+  const kmsInput = document.getElementById('kms');
+
+  if (vehicleTypeSelect) {
+    vehicleTypeSelect.addEventListener('change', () => {
+      const type = vehicleTypeSelect.value;
+      const rate = getVehicleRate(type);
+
+      // Update rate display
+      if (rateInput) {
+        rateInput.value = rate.toFixed(2);
+      }
+
+      // Recalculate amount
+      const kms = parseFloat(kmsInput?.value) || 0;
+      updateVehicleAmount(kms, type);
+    });
+  }
+}
+
+// ============================================
+// Travel Dates & Days Calculation
+// ============================================
+
+/**
+ * Calculates the number of days between two datetime-local values.
+ * @param {string} startValue - Start datetime-local value
+ * @param {string} endValue - End datetime-local value
+ * @returns {number|null} Number of days (rounded to nearest 0.5) or null if invalid
+ */
+export function calculateTravelDays(startValue, endValue) {
+  if (!startValue || !endValue) return null;
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return null;
+
+  const diffMs = end - start;
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  // Round to nearest 0.5
+  return Math.round(diffDays * 2) / 2;
+}
+
+/**
+ * Sets up auto-calculation of travel days from start/end dates.
+ * Supports manual override — once the user edits the field, auto-calc stops
+ * until they clear it or the dates change again.
+ * @returns {void}
+ */
+export function setupTravelDatesCalculation() {
+  const startInput = document.getElementById('travelStartDate');
+  const endInput = document.getElementById('travelEndDate');
+  const daysInput = document.getElementById('numberOfDays');
+  const autoCalcNote = document.getElementById('daysAutoCalcNote');
+
+  if (!startInput || !endInput || !daysInput) return;
+
+  // Track manual override
+  let manuallyOverridden = false;
+
+  // When user manually edits the days field
+  daysInput.addEventListener('input', () => {
+    manuallyOverridden = true;
+    if (autoCalcNote) {
+      autoCalcNote.textContent = 'Manually entered. Clear to resume auto-calculation.';
+    }
+  });
+
+  // Reset override if field is cleared
+  daysInput.addEventListener('change', () => {
+    if (!daysInput.value || daysInput.value === '') {
+      manuallyOverridden = false;
+      if (autoCalcNote) {
+        autoCalcNote.textContent = 'Auto-calculated from travel dates. Edit to override.';
+      }
+      // Recalculate
+      const days = calculateTravelDays(startInput.value, endInput.value);
+      if (days !== null) {
+        daysInput.value = days;
+      }
+    }
+  });
+
+  // Auto-calculate when dates change
+  const onDateChange = () => {
+    if (manuallyOverridden) return;
+    const days = calculateTravelDays(startInput.value, endInput.value);
+    if (days !== null) {
+      daysInput.value = days;
+    }
+  };
+
+  startInput.addEventListener('change', onDateChange);
+  endInput.addEventListener('change', onDateChange);
+}
+
+// ============================================
+// Alerts & Feedback
+// ============================================
 
 /**
  * Shows a Bootstrap alert message in the alert container.
@@ -385,13 +819,16 @@ export function setupEventListeners(handlers) {
 /**
  * Initializes the UI on page load.
  * @param {object} config - Application configuration
+ * @param {string} [claimantType='member'] - Initial claimant type
  * @returns {void}
  */
-export function initializeUI(config) {
+export function initializeUI(config, claimantType = 'member') {
   disablePrintMode();
   setDefaultDate();
   renderAttachmentFilenames();
-  generateExpenseTable(EXPENSE_TYPES);
+  generateExpenseTable(EXPENSE_TYPES, claimantType);
+  setupVehicleTypeDropdown();
+  setupTravelDatesCalculation();
   disableScrollOnNumberInputs();
   if (config && config.DEBUG_MODE && config.DEBUG_MODE.toUpperCase() === 'DEBUG') {
     hidePdfButton();
@@ -399,7 +836,7 @@ export function initializeUI(config) {
 }
 
 // ============================================
-// Phase 1: Button Loading States
+// Button Loading States
 // ============================================
 
 /**
@@ -491,7 +928,7 @@ export function setButtonLoadingWithText(button, loading, loadingText = 'Loading
 }
 
 // ============================================
-// Phase 1: Progress Overlay
+// Progress Overlay
 // ============================================
 
 /** @type {HTMLElement|null} */

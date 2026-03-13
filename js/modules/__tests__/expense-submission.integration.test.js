@@ -26,6 +26,35 @@ import { handleFormSubmit, submitBulk } from '../form-handler.js';
 import { EXPENSE_TYPES, getAccountCode } from '../expense-types.js';
 
 // ============================================
+// Claimant Type Mock Helper
+// ============================================
+
+// Save original querySelector for restoration
+const _originalQuerySelector = globalThis.document.querySelector;
+
+/**
+ * Mocks the claimant type by overriding querySelector for radio buttons.
+ * Must be cleaned up with restoreClaimantTypeMock().
+ * @param {string} type - 'staff', 'member', or 'other'
+ */
+function mockClaimantType(type) {
+  const saved = globalThis.document.querySelector;
+  globalThis.document.querySelector = function(selector) {
+    if (selector === 'input[name="claimantType"]:checked') {
+      return { value: type };
+    }
+    return _originalQuerySelector.call(this, selector);
+  };
+}
+
+/**
+ * Restores the original querySelector after mocking claimant type.
+ */
+function restoreClaimantTypeMock() {
+  globalThis.document.querySelector = _originalQuerySelector;
+}
+
+// ============================================
 // Test Data Factory - Creative Iterations
 // ============================================
 
@@ -157,6 +186,7 @@ describe('Expense Submission Integration', () => {
   });
 
   afterEach(() => {
+    restoreClaimantTypeMock();
     const errors = stopErrorCapture();
     if (errors.length > 0) {
       // Log errors for debugging but don't fail unless expected
@@ -168,13 +198,24 @@ describe('Expense Submission Integration', () => {
     test.each(CREATIVE_TEST_DATA.nurses)(
       'submits claim for $fullName ($employeeId)',
       async ({ fullName, employeeId }) => {
+        // Mock as staff so employeeId is collected
+        mockClaimantType('staff');
+
         const mockEvent = createMockEvent(
           createMockForm({
             fullName,
             employeeId,
+            email: 'test@nzno.org.nz',
             expenseDate: '2025-06-15',
+            eventReason: 'Conference attendance',
+            travelStartDate: '2025-06-15T08:00',
+            travelEndDate: '2025-06-15T17:00',
+            numberOfDays: '1',
+            costCentre: '',
+            bankAccountName: 'Test Account',
+            bankAccountNumber: '01-0123-0123456-00',
             kms: '0',
-            rate: '1.04',
+            rate: '1.17',
             vehicleAmount: '0',
             vehicleComment: ''
           })
@@ -201,13 +242,24 @@ describe('Expense Submission Integration', () => {
     test.each(CREATIVE_TEST_DATA.expenseDates)(
       'submits claim with date %s',
       async (expenseDate) => {
+        // Mock as staff for consistency with test data
+        mockClaimantType('staff');
+
         const mockEvent = createMockEvent(
           createMockForm({
             fullName: 'Test Nurse',
             employeeId: 'NZN-2024-TEST',
+            email: 'nurse@nzno.org.nz',
             expenseDate,
+            eventReason: 'Training',
+            travelStartDate: `${expenseDate}T08:00`,
+            travelEndDate: `${expenseDate}T17:00`,
+            numberOfDays: '1',
+            costCentre: '',
+            bankAccountName: 'Test Account',
+            bankAccountNumber: '01-0123-0123456-00',
             kms: '0',
-            rate: '1.04',
+            rate: '1.17',
             vehicleAmount: '0',
             vehicleComment: ''
           })

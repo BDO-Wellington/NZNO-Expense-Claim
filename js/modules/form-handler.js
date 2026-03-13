@@ -7,10 +7,11 @@
 
 import { collectAttachments, logError, safeParseFloat, calculatePayloadSize, exceedsPayloadLimit, formatBytes, DEFAULT_PAYLOAD_LIMIT_MB } from './utils.js';
 import { EXPENSE_TYPES, getAccountCode, VEHICLE_ACCOUNT_CODE } from './expense-types.js';
-import { showAlert, setFormToViewMode, setButtonLoadingWithText, showProgressOverlay, updateProgressStatus, hideProgressOverlay } from './ui-handlers.js';
+import { showAlert, setFormToViewMode, setButtonLoadingWithText, showProgressOverlay, updateProgressStatus, hideProgressOverlay, getSelectedVehicleType } from './ui-handlers.js';
 import { generatePDFBase64, mergeAttachmentsPDF, mergeAttachmentsByAccountCode, getDynamicPdfFilename, getAttachmentsPdfFilename, processFileAsIndividualAttachment, collectAttachmentsWithAccountCodes } from './pdf-generator.js';
 import { shouldSubmitIndividually, shouldStringifyLineItems, getEffectiveApiUrl } from './config-loader.js';
 import { showSuccess, showError, showWarning } from './toast.js';
+import { getClaimantType } from './claimant-type.js';
 
 /**
  * Error types for categorizing submission failures
@@ -62,7 +63,7 @@ function getErrorMessage(errorType) {
 }
 
 /**
- * Collects standard expense items from the form.
+ * Collects standard expense items from the form, handling different render types.
  * @returns {Promise<Array<object>>} Array of expense items
  */
 async function collectStandardExpenses() {
@@ -70,25 +71,74 @@ async function collectStandardExpenses() {
   const standardRows = document.querySelectorAll('#StandardExpensesTable tbody tr');
 
   for (const row of standardRows) {
-    // Get the expense name from the .expense-name span, not the full cell text
-    // The cell contains both name and account code: "<span class='expense-name'>Flights</span><span class='expense-code'> (480)</span>"
-    const nameSpan = row.cells[0].querySelector('.expense-name');
-    const type = nameSpan ? nameSpan.textContent.trim() : row.cells[0].textContent.trim();
-    const amountInput = row.querySelector('input[type="number"]');
+    const renderType = row.getAttribute('data-render-type');
+    const accountCode = row.getAttribute('data-account-code') || '';
+
+    // Skip note/banner rows
+    if (row.classList.contains('meal-note-row')) continue;
+
+    const nameSpan = row.querySelector('.expense-name');
+    const type = nameSpan ? nameSpan.textContent.trim() : '';
+    if (!type) continue;
+
+    // Collect notes if present
+    const notesInput = row.querySelector('input[type="text"][name$="Notes"]');
+    const notes = notesInput ? notesInput.value.trim() : '';
+
+    // Collect attachment
     const fileInput = row.querySelector('input[type="file"]');
-    
-    const amount = amountInput ? safeParseFloat(amountInput.value, 0) : 0;
     const attachments = await collectAttachments(fileInput);
-    
-    standardExpenses.push({
-      type,
-      amount,
-      description: '',
-      attachments,
-      accountCode: getAccountCode(type)
-    });
+
+    if (renderType === 'accommodation') {
+      // Accommodation: nights x price per night
+      const nightsInput = row.querySelector('input[name="accommodationNights"]');
+      const priceInput = row.querySelector('input[name="accommodationPricePerNight"]');
+      const totalInput = row.querySelector('input[name="accommodationAmount"]');
+
+      const nights = nightsInput ? safeParseFloat(nightsInput.value, 0) : 0;
+      const pricePerNight = priceInput ? safeParseFloat(priceInput.value, 0) : 0;
+      const amount = totalInput ? safeParseFloat(totalInput.value, 0) : nights * pricePerNight;
+
+      standardExpenses.push({
+        type,
+        amount,
+        nights,
+        pricePerNight,
+        description: notes,
+        attachments,
+        accountCode
+      });
+    } else if (renderType === 'nights-allowance') {
+      // Overnight allowance: nights x rate
+      const nightsInput = row.querySelector('input[name="overnightAllowanceNights"]');
+      const totalInput = row.querySelector('input[name="overnightAllowanceAmount"]');
+
+      const nights = nightsInput ? safeParseFloat(nightsInput.value, 0) : 0;
+      const amount = totalInput ? safeParseFloat(totalInput.value, 0) : 0;
+
+      standardExpenses.push({
+        type,
+        amount,
+        nights,
+        description: notes,
+        attachments,
+        accountCode
+      });
+    } else {
+      // Standard row or meal sub-item
+      const amountInput = row.querySelector('input[type="number"]');
+      const amount = amountInput ? safeParseFloat(amountInput.value, 0) : 0;
+
+      standardExpenses.push({
+        type,
+        amount,
+        description: notes,
+        attachments,
+        accountCode: accountCode || getAccountCode(type)
+      });
+    }
   }
-  
+
   return standardExpenses;
 }
 
@@ -99,15 +149,15 @@ async function collectStandardExpenses() {
 async function collectOtherExpenses() {
   const otherExpenses = [];
   const otherRows = document.querySelectorAll('#otherExpensesBody tr');
-  
+
   for (const row of otherRows) {
     const description = row.querySelector('input[name="other_description[]"]')?.value || '';
     const amountInput = row.querySelector('input[name="other_amount[]"]');
     const amount = amountInput ? safeParseFloat(amountInput.value, 0) : 0;
-    
+
     const attachmentInput = row.querySelector('input[name="other_attachment[]"]');
     const attachments = await collectAttachments(attachmentInput);
-    
+
     otherExpenses.push({
       type: 'Other',
       amount,
@@ -116,7 +166,7 @@ async function collectOtherExpenses() {
       accountCode: ''
     });
   }
-  
+
   return otherExpenses;
 }
 
@@ -127,10 +177,13 @@ async function collectOtherExpenses() {
  */
 function collectVehicleData(form) {
   return {
+    vehicleType: getSelectedVehicleType(),
     kms: safeParseFloat(form.kms?.value, 0),
     rate: safeParseFloat(form.rate?.value, 0),
     amount: safeParseFloat(form.vehicleAmount?.value, 0),
-    comment: form.vehicleComment?.value || ''
+    comment: form.vehicleComment?.value || '',
+    travelledFrom: form.travelledFrom?.value || '',
+    travelledTo: form.travelledTo?.value || ''
   };
 }
 
@@ -146,9 +199,14 @@ function buildLineItemsArray(expenseItems, vehicleData) {
   // Add standard and other expenses
   expenseItems.forEach(item => {
     if (item.amount > 0) {
-      const description = item.type === 'Other'
-        ? `Other Expenses - ${item.description}`
-        : item.type;
+      let description;
+      if (item.type === 'Other') {
+        description = `Other Expenses - ${item.description}`;
+      } else if (item.description) {
+        description = `${item.type} - ${item.description}`;
+      } else {
+        description = item.type;
+      }
 
       lineItems.push({
         description,
@@ -162,12 +220,19 @@ function buildLineItemsArray(expenseItems, vehicleData) {
 
   // Add private vehicle if applicable
   if (vehicleData.kms > 0 && vehicleData.amount > 0) {
-    const description = vehicleData.comment
-      ? `Private Vehicle - ${vehicleData.comment}`
-      : 'Private Vehicle';
+    const parts = ['Private Vehicle'];
+    if (vehicleData.vehicleType) {
+      parts[0] = `Private Vehicle (${vehicleData.vehicleType})`;
+    }
+    if (vehicleData.travelledFrom && vehicleData.travelledTo) {
+      parts.push(`${vehicleData.travelledFrom} to ${vehicleData.travelledTo}`);
+    }
+    if (vehicleData.comment) {
+      parts.push(vehicleData.comment);
+    }
 
     lineItems.push({
-      description,
+      description: parts.join(' - '),
       quantity: 1,
       amount: vehicleData.amount,
       accountCode: VEHICLE_ACCOUNT_CODE,
@@ -184,11 +249,33 @@ function buildLineItemsArray(expenseItems, vehicleData) {
  * @returns {object} Form data object
  */
 function collectFormData(form) {
-  return {
+  const claimantType = getClaimantType();
+
+  const data = {
+    claimantType,
     fullName: form.fullName?.value || '',
-    employeeId: form.employeeId?.value || '',
-    expenseDate: form.expenseDate?.value || ''
+    email: form.email?.value || '',
+    expenseDate: form.expenseDate?.value || '',
+    eventReason: form.eventReason?.value || '',
+    travelStartDate: form.travelStartDate?.value || '',
+    travelEndDate: form.travelEndDate?.value || '',
+    numberOfDays: form.numberOfDays?.value || '',
+    costCentre: form.costCentre?.value || '',
+    bankAccountName: form.bankAccountName?.value || '',
+    bankAccountNumber: form.bankAccountNumber?.value || ''
   };
+
+  // Conditional fields based on claimant type
+  if (claimantType === 'member') {
+    data.membershipNumber = form.membershipNumber?.value || '';
+    data.nznoStaffContact = form.querySelector('#nznoStaffContactMember')?.value || '';
+  } else if (claimantType === 'staff') {
+    data.employeeId = form.employeeId?.value || '';
+  } else if (claimantType === 'other') {
+    data.nznoStaffContact = form.querySelector('#nznoStaffContactOther')?.value || '';
+  }
+
+  return data;
 }
 
 /**
@@ -205,12 +292,12 @@ async function submitSingleItem(item, formData, apiUrl) {
       varFlowEnvUpload: true,
       expenseItems: [item]
     };
-    
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    
+
     return response.ok;
   } catch (error) {
     logError('Failed to submit expense item', error);
@@ -228,12 +315,12 @@ async function submitSingleItem(item, formData, apiUrl) {
 async function submitIndividualItems(expenseItems, formData, apiUrl) {
   // Only submit items with amounts > 0
   const itemsToSubmit = expenseItems.filter(item => item.amount > 0);
-  
+
   if (itemsToSubmit.length === 0) {
     showAlert('No expense items to submit.', 'warning');
     return false;
   }
-  
+
   for (const item of itemsToSubmit) {
     const success = await submitSingleItem(item, formData, apiUrl);
     if (!success) {
@@ -241,7 +328,7 @@ async function submitIndividualItems(expenseItems, formData, apiUrl) {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -282,6 +369,26 @@ async function submitSingleBatch(payload, apiUrl, stringifyForZapier) {
 }
 
 /**
+ * Collects bank screenshot as a separate attachment if present.
+ * @returns {Promise<object|null>} Attachment object or null
+ */
+async function collectBankScreenshot() {
+  const input = document.getElementById('bankScreenshot');
+  if (!input || !input.files || input.files.length === 0) return null;
+
+  const attachments = await collectAttachments(input);
+  if (attachments.length > 0) {
+    return {
+      fileName: `Bank_Account_Screenshot.${attachments[0].filename.split('.').pop()}`,
+      mimeType: attachments[0].filename.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+      content: attachments[0].content,
+      isBankScreenshot: true
+    };
+  }
+  return null;
+}
+
+/**
  * Submits all expense data as a bulk submission.
  * Automatically splits into batches if payload exceeds Xero API limits.
  * @param {Array<object>} expenseItems - All expense items
@@ -318,6 +425,9 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
       content: summaryPdfBase64
     };
 
+    // Collect bank screenshot separately
+    const bankScreenshot = await collectBankScreenshot();
+
     // Process attachments by account code
     updateProgressStatus('Processing attachments by category...');
     let attachmentGroups = [];
@@ -330,6 +440,9 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
 
     // Calculate total payload size (summary + all attachment groups)
     const allAttachments = [summaryAttachment];
+    if (bankScreenshot) {
+      allAttachments.push(bankScreenshot);
+    }
     for (const group of attachmentGroups) {
       allAttachments.push({
         fileName: group.filename,
@@ -369,6 +482,11 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
         attachmentsArray = [summaryAttachment];
       }
 
+      // Add bank screenshot if present
+      if (bankScreenshot) {
+        attachmentsArray.push(bankScreenshot);
+      }
+
       const attachmentsPayload = stringifyLineItems
         ? btoa(JSON.stringify(attachmentsArray))
         : attachmentsArray;
@@ -405,11 +523,16 @@ async function submitBulk(expenseItems, vehicleData, formData, apiUrl, config) {
     // Batch 1: Main submission with summary PDF and line items
     updateProgressStatus(`Submitting batch 1 of ${totalBatches} (Summary)...`);
 
+    const mainAttachments = [summaryAttachment];
+    if (bankScreenshot) {
+      mainAttachments.push(bankScreenshot);
+    }
+
     const mainPayload = {
       ...formData,
       varFlowEnvUpload: false,
       lineItems: lineItemsArray,
-      attachments: [summaryAttachment],
+      attachments: mainAttachments,
       batchInfo: {
         batch: 1,
         totalBatches,
@@ -557,6 +680,14 @@ export async function handleFormSubmit(event, config) {
   const form = event.target;
   const apiUrl = getEffectiveApiUrl(config);
   const submitButton = form.querySelector('button[type="submit"]');
+
+  // Honeypot check - if filled, silently reject (bot detected)
+  const honeypot = form.querySelector('#phone');
+  if (honeypot && honeypot.value) {
+    logError('Honeypot field filled - likely bot submission');
+    showSuccess('Successfully submitted the expense form.');
+    return;
+  }
 
   // Check for offline status before attempting submission
   if (!navigator.onLine) {

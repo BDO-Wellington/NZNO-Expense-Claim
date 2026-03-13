@@ -368,3 +368,37 @@ label {
 .custom-radio .custom-control-input:checked ~ .custom-control-label::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3E%3Ccircle r='3' fill='%23fff'/%3E%3C/svg%3E");
 }
+
+/* ----------------------------------------
+   Mobile Touch Targets (576px and below)
+   ---------------------------------------- */
+@media (max-width: 576px) {
+  .form-control {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  select.form-control:not([size]):not([multiple]) {
+    height: 44px;
+  }
+
+  .form-control-file {
+    padding: 0.5rem 0;
+    font-size: 16px;
+  }
+
+  textarea.form-control {
+    height: auto;
+    min-height: 80px;
+  }
+
+  .form-control-sm {
+    height: 38px;
+    font-size: 14px;
+  }
+
+  .form-control-lg {
+    height: 52px;
+    font-size: 18px;
+  }
+}

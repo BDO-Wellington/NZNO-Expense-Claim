@@ -10,17 +10,21 @@
  * - Valid/invalid visual states
  * - Form-level error summary
  * - Accessible error messages
+ * - Conditional validation based on claimant type
  */
 
+import { getClaimantType } from './claimant-type.js';
+
 /**
- * Validation rules for form fields
+ * Validation rules for form fields.
+ * Rules with a `condition` function are only applied when the condition returns true.
  */
 const VALIDATION_RULES = {
   fullName: {
     required: true,
     minLength: 2,
     maxLength: 100,
-    pattern: /^[a-zA-Z\s\-']+$/,
+    pattern: /^[a-zA-ZÀ-ÿ\s\-']+$/,
     messages: {
       required: 'Full name is required',
       minLength: 'Name must be at least 2 characters',
@@ -28,23 +32,18 @@ const VALIDATION_RULES = {
       pattern: 'Name can only contain letters, spaces, hyphens, and apostrophes'
     }
   },
-  employeeId: {
+  email: {
     required: true,
-    minLength: 1,
-    maxLength: 20,
-    pattern: /^[a-zA-Z0-9\-]+$/,
+    pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     messages: {
-      required: 'Employee ID is required',
-      minLength: 'Employee ID is required',
-      maxLength: 'Employee ID must be less than 20 characters',
-      pattern: 'Employee ID can only contain letters, numbers, and hyphens'
+      required: 'Email address is required',
+      pattern: 'Please enter a valid email address'
     }
   },
   expenseDate: {
     required: true,
     custom: (value) => {
       const date = new Date(value);
-      // Check for invalid date (e.g., "invalid" or malformed input)
       if (isNaN(date.getTime())) {
         return 'Please enter a valid date';
       }
@@ -57,6 +56,119 @@ const VALIDATION_RULES = {
     },
     messages: {
       required: 'Expense date is required'
+    }
+  },
+  eventReason: {
+    required: true,
+    minLength: 3,
+    maxLength: 500,
+    messages: {
+      required: 'Event/reason for claim is required',
+      minLength: 'Please provide at least 3 characters',
+      maxLength: 'Event/reason must be less than 500 characters'
+    }
+  },
+  travelStartDate: {
+    required: true,
+    custom: (value) => {
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        return 'Please enter a valid date and time';
+      }
+      return null;
+    },
+    messages: {
+      required: 'Travel start date and time is required'
+    }
+  },
+  travelEndDate: {
+    required: true,
+    custom: (value) => {
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        return 'Please enter a valid date and time';
+      }
+      // Check that end is after start
+      const startInput = document.getElementById('travelStartDate');
+      if (startInput && startInput.value) {
+        const startDate = new Date(startInput.value);
+        if (!isNaN(startDate.getTime()) && date <= startDate) {
+          return 'Travel end date must be after start date';
+        }
+      }
+      return null;
+    },
+    messages: {
+      required: 'Travel end date and time is required'
+    }
+  },
+  bankAccountName: {
+    required: true,
+    minLength: 2,
+    maxLength: 100,
+    messages: {
+      required: 'Bank account name is required',
+      minLength: 'Bank account name must be at least 2 characters',
+      maxLength: 'Bank account name must be less than 100 characters'
+    }
+  },
+  bankAccountNumber: {
+    required: true,
+    minLength: 1,
+    maxLength: 30,
+    messages: {
+      required: 'Bank account number is required',
+      minLength: 'Bank account number is required',
+      maxLength: 'Bank account number must be less than 30 characters'
+    }
+  },
+  // Conditional: Member only
+  membershipNumber: {
+    required: true,
+    condition: () => getClaimantType() === 'member',
+    minLength: 1,
+    maxLength: 20,
+    messages: {
+      required: 'Membership number is required',
+      minLength: 'Membership number is required',
+      maxLength: 'Membership number must be less than 20 characters'
+    }
+  },
+  nznoStaffContactMember: {
+    required: true,
+    condition: () => getClaimantType() === 'member',
+    minLength: 2,
+    maxLength: 100,
+    messages: {
+      required: 'NZNO staff contact is required',
+      minLength: 'NZNO staff contact must be at least 2 characters',
+      maxLength: 'NZNO staff contact must be less than 100 characters'
+    }
+  },
+  // Conditional: Staff only
+  employeeId: {
+    required: true,
+    condition: () => getClaimantType() === 'staff',
+    minLength: 1,
+    maxLength: 20,
+    pattern: /^[a-zA-Z0-9\-]+$/,
+    messages: {
+      required: 'Employee ID is required',
+      minLength: 'Employee ID is required',
+      maxLength: 'Employee ID must be less than 20 characters',
+      pattern: 'Employee ID can only contain letters, numbers, and hyphens'
+    }
+  },
+  // Conditional: Other only
+  nznoStaffContactOther: {
+    required: true,
+    condition: () => getClaimantType() === 'other',
+    minLength: 2,
+    maxLength: 100,
+    messages: {
+      required: 'NZNO staff contact is required',
+      minLength: 'NZNO staff contact must be at least 2 characters',
+      maxLength: 'NZNO staff contact must be less than 100 characters'
     }
   }
 };
@@ -132,7 +244,8 @@ function createInvalidIndicator() {
 }
 
 /**
- * Validates a single field value against its rules
+ * Validates a single field value against its rules.
+ * Skips validation if the rule has a condition that evaluates to false.
  * @param {string} fieldId - Field identifier
  * @param {string} value - Field value
  * @returns {string|null} Error message or null if valid
@@ -140,6 +253,11 @@ function createInvalidIndicator() {
 export function validateField(fieldId, value) {
   const rules = VALIDATION_RULES[fieldId];
   if (!rules) return null;
+
+  // Check condition - skip validation if condition returns false
+  if (rules.condition && !rules.condition()) {
+    return null;
+  }
 
   const trimmedValue = value.trim();
 
@@ -289,6 +407,11 @@ export function validateForm(form) {
 
   // Validate each field with rules
   Object.keys(VALIDATION_RULES).forEach(fieldId => {
+    const rules = VALIDATION_RULES[fieldId];
+
+    // Skip if condition not met
+    if (rules.condition && !rules.condition()) return;
+
     const input = form.querySelector(`#${fieldId}`);
     if (input) {
       const error = validateField(fieldId, input.value);
