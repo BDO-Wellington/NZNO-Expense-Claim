@@ -681,6 +681,14 @@ export async function handleFormSubmit(event, config) {
   const apiUrl = getEffectiveApiUrl(config);
   const submitButton = form.querySelector('button[type="submit"]');
 
+  // Honeypot check - if filled, silently reject (bot detected)
+  const honeypot = form.querySelector('#phone');
+  if (honeypot && honeypot.value) {
+    logError('Honeypot field filled - likely bot submission');
+    showSuccess('Successfully submitted the expense form.');
+    return;
+  }
+
   // Check for offline status before attempting submission
   if (!navigator.onLine) {
     showError(getErrorMessage(ERROR_TYPES.OFFLINE));

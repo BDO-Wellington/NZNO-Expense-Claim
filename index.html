@@ -16,6 +16,7 @@ Best Practices:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>Expense Claim Submission Form</title>
     
     <!-- Start Single Page Apps for GitHub Pages -->
@@ -340,6 +341,11 @@ Best Practices:
                     </li>
                 </ul>
             </section>
+
+            <div class="phone-field" aria-hidden="true">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" tabindex="-1" autocomplete="off">
+            </div>
 
             <button type="submit" class="btn btn-primary">Submit Claim</button>
         </form>
