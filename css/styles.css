@@ -57,12 +57,17 @@
 /* ----------------------------------------
    Base Typography
    ---------------------------------------- */
+html {
+    overflow-x: hidden;
+}
+
 body {
     font-family: var(--nzno-font-primary);
     font-size: 14px;
     line-height: 1.5;
     color: var(--nzno-dark);
     background-color: var(--nzno-light);
+    overflow-x: hidden;
 }
 
 /* ----------------------------------------
@@ -690,6 +695,40 @@ label {
 
     .form-section {
         padding: var(--nzno-spacing-md);
+    }
+
+    /* Neutralize negative margins and column padding that cause horizontal overflow */
+    .form-row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .form-row > [class*="col-"],
+    .row > [class*="col-"] {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    /* Ensure all inputs fit within their containers */
+    .form-control,
+    input,
+    select,
+    textarea {
+        max-width: 90%;
+        box-sizing: border-box;
+    }
+
+    .form-group {
+        max-width: 90%;
+    }
+
+    .form-section {
+        max-width: 85%;
     }
 
     .table th,
