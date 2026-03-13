@@ -697,7 +697,7 @@ label {
         padding: var(--nzno-spacing-md);
     }
 
-    /* Neutralize negative margins that cause horizontal overflow */
+    /* Neutralize negative margins and column padding that cause horizontal overflow */
     .form-row {
         margin-left: 0;
         margin-right: 0;
@@ -706,6 +706,29 @@ label {
     .row {
         margin-left: 0;
         margin-right: 0;
+    }
+
+    .form-row > [class*="col-"],
+    .row > [class*="col-"] {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    /* Ensure all inputs fit within their containers */
+    .form-control,
+    input,
+    select,
+    textarea {
+        max-width: 90%;
+        box-sizing: border-box;
+    }
+
+    .form-group {
+        max-width: 90%;
+    }
+
+    .form-section {
+        max-width: 85%;
     }
 
     .table th,
