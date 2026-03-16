@@ -52,10 +52,9 @@ describe('Validation Module', () => {
       expect(VALIDATION_RULES.fullName.required).toBe(true);
     });
 
-    test('should have rules for employeeId (conditional on staff)', () => {
-      expect(VALIDATION_RULES.employeeId).toBeDefined();
-      expect(VALIDATION_RULES.employeeId.required).toBe(true);
-      expect(typeof VALIDATION_RULES.employeeId.condition).toBe('function');
+    test('should have rules for costCentre', () => {
+      expect(VALIDATION_RULES.costCentre).toBeDefined();
+      expect(VALIDATION_RULES.costCentre.required).toBe(true);
     });
 
     test('should have rules for expenseDate', () => {
@@ -84,17 +83,12 @@ describe('Validation Module', () => {
       expect(VALIDATION_RULES.fullName.maxLength).toBe(100);
     });
 
-    test('employeeId should have min and max length', () => {
-      expect(VALIDATION_RULES.employeeId.minLength).toBe(1);
-      expect(VALIDATION_RULES.employeeId.maxLength).toBe(20);
-    });
-
     test('fullName should have pattern for valid characters', () => {
       expect(VALIDATION_RULES.fullName.pattern).toBeInstanceOf(RegExp);
     });
 
-    test('employeeId should have pattern for valid characters', () => {
-      expect(VALIDATION_RULES.employeeId.pattern).toBeInstanceOf(RegExp);
+    test('bankAccountNumber should have custom validator', () => {
+      expect(typeof VALIDATION_RULES.bankAccountNumber.custom).toBe('function');
     });
 
     test('expenseDate should have custom validator', () => {
@@ -155,62 +149,36 @@ describe('Validation Module', () => {
       });
     });
 
-    describe('employeeId validation (when staff type active)', () => {
-      beforeEach(() => {
-        mockClaimantType('staff');
+    describe('costCentre validation', () => {
+      test('should return error for empty cost centre', () => {
+        const error = validateField('costCentre', '');
+        expect(error).toBe('Cost Centre Code is required');
       });
 
-      test('should return error for empty ID when staff', () => {
-        const error = validateField('employeeId', '');
-        expect(error).toBe('Employee ID is required');
-      });
-
-      test('should return error for whitespace only', () => {
-        const error = validateField('employeeId', '   ');
-        expect(error).toBe('Employee ID is required');
-      });
-
-      test('should return error for invalid characters (at symbol)', () => {
-        const error = validateField('employeeId', 'EMP@123');
-        expect(error).toBe('Employee ID can only contain letters, numbers, and hyphens');
-      });
-
-      test('should return error for invalid characters (spaces)', () => {
-        const error = validateField('employeeId', 'EMP 123');
-        expect(error).toBe('Employee ID can only contain letters, numbers, and hyphens');
-      });
-
-      test('should return null for valid ID with hyphen', () => {
-        const error = validateField('employeeId', 'EMP-12345');
-        expect(error).toBeNull();
-      });
-
-      test('should return null for alphanumeric ID', () => {
-        const error = validateField('employeeId', 'ABC123');
-        expect(error).toBeNull();
-      });
-
-      test('should return null for numeric only ID', () => {
-        const error = validateField('employeeId', '12345');
-        expect(error).toBeNull();
-      });
-
-      test('should return null for single character ID', () => {
-        const error = validateField('employeeId', 'A');
+      test('should return null for valid cost centre', () => {
+        const error = validateField('costCentre', 'CC100');
         expect(error).toBeNull();
       });
     });
 
-    describe('employeeId validation skipped for non-staff', () => {
-      test('should return null for empty ID when member (condition not met)', () => {
-        mockClaimantType('member');
-        const error = validateField('employeeId', '');
+    describe('bankAccountNumber validation', () => {
+      test('should return error for empty bank account', () => {
+        const error = validateField('bankAccountNumber', '');
+        expect(error).toBe('Bank account number is required');
+      });
+
+      test('should return error for incomplete bank account', () => {
+        const error = validateField('bankAccountNumber', '01-1234');
+        expect(error).toContain('incomplete');
+      });
+
+      test('should return null for valid 18-char bank account', () => {
+        const error = validateField('bankAccountNumber', '01-1234-5678901-00');
         expect(error).toBeNull();
       });
 
-      test('should return null for empty ID when other (condition not met)', () => {
-        mockClaimantType('other');
-        const error = validateField('employeeId', '');
+      test('should return null for valid 19-char bank account', () => {
+        const error = validateField('bankAccountNumber', '01-1234-5678901-001');
         expect(error).toBeNull();
       });
     });
@@ -305,12 +273,8 @@ describe('Validation Module', () => {
       expect(VALIDATION_RULES.fullName.messages.pattern).toBe('Name can only contain letters, spaces, hyphens, and apostrophes');
     });
 
-    test('employeeId required message is correct', () => {
-      expect(VALIDATION_RULES.employeeId.messages.required).toBe('Employee ID is required');
-    });
-
-    test('employeeId pattern message is correct', () => {
-      expect(VALIDATION_RULES.employeeId.messages.pattern).toBe('Employee ID can only contain letters, numbers, and hyphens');
+    test('costCentre required message is correct', () => {
+      expect(VALIDATION_RULES.costCentre.messages.required).toBe('Cost Centre Code is required');
     });
 
     test('expenseDate required message is correct', () => {
@@ -341,22 +305,6 @@ describe('Validation Module', () => {
 
     test('fullName pattern should not match numbers', () => {
       expect(VALIDATION_RULES.fullName.pattern.test('John123')).toBe(false);
-    });
-
-    test('employeeId pattern should match alphanumeric', () => {
-      expect(VALIDATION_RULES.employeeId.pattern.test('ABC123')).toBe(true);
-    });
-
-    test('employeeId pattern should match with hyphens', () => {
-      expect(VALIDATION_RULES.employeeId.pattern.test('EMP-123')).toBe(true);
-    });
-
-    test('employeeId pattern should not match spaces', () => {
-      expect(VALIDATION_RULES.employeeId.pattern.test('EMP 123')).toBe(false);
-    });
-
-    test('employeeId pattern should not match special chars', () => {
-      expect(VALIDATION_RULES.employeeId.pattern.test('EMP@123')).toBe(false);
     });
 
     test('email pattern should match valid emails', () => {
@@ -562,6 +510,7 @@ describe('Validation Module', () => {
         email: '',
         expenseDate: '',
         eventReason: '',
+        costCentre: '',
         travelStartDate: '',
         travelEndDate: '',
         bankAccountName: '',
@@ -581,6 +530,7 @@ describe('Validation Module', () => {
       mockForm.querySelector('#email').value = 'john@example.com';
       mockForm.querySelector('#expenseDate').value = '2025-01-01';
       mockForm.querySelector('#eventReason').value = 'Conference attendance';
+      mockForm.querySelector('#costCentre').value = 'CC100';
       mockForm.querySelector('#travelStartDate').value = '2025-01-01T08:00';
       mockForm.querySelector('#travelEndDate').value = '2025-01-03T18:00';
       mockForm.querySelector('#bankAccountName').value = 'John Smith';
@@ -613,10 +563,11 @@ describe('Validation Module', () => {
       mockForm.querySelector('#email').value = 'john@example.com';
       mockForm.querySelector('#expenseDate').value = '2025-01-01';
       mockForm.querySelector('#eventReason').value = 'Conference';
+      mockForm.querySelector('#costCentre').value = 'CC100';
       mockForm.querySelector('#travelStartDate').value = '2025-01-01T08:00';
       mockForm.querySelector('#travelEndDate').value = '2025-01-03T18:00';
       mockForm.querySelector('#bankAccountName').value = 'John';
-      mockForm.querySelector('#bankAccountNumber').value = '01-1234';
+      mockForm.querySelector('#bankAccountNumber').value = '01-1234-5678901-00';
       mockForm.querySelector('#membershipNumber').value = 'M1';
       mockForm.querySelector('#nznoStaffContactMember').value = 'Jane';
 
@@ -639,10 +590,11 @@ describe('Validation Module', () => {
       mockForm.querySelector('#email').value = 'john@example.com';
       mockForm.querySelector('#expenseDate').value = '2025-01-01';
       mockForm.querySelector('#eventReason').value = 'Conference';
+      mockForm.querySelector('#costCentre').value = 'CC100';
       mockForm.querySelector('#travelStartDate').value = '2025-01-01T08:00';
       mockForm.querySelector('#travelEndDate').value = '2025-01-03T18:00';
       mockForm.querySelector('#bankAccountName').value = 'John';
-      mockForm.querySelector('#bankAccountNumber').value = '01-1234';
+      mockForm.querySelector('#bankAccountNumber').value = '01-1234-5678901-00';
       mockForm.querySelector('#membershipNumber').value = 'M1';
       mockForm.querySelector('#nznoStaffContactMember').value = 'Jane';
 

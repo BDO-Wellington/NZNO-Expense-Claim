@@ -269,6 +269,11 @@ label {
 /* ----------------------------------------
    Tables - NZNO Styling
    ---------------------------------------- */
+#StandardExpensesTable th:nth-child(1) { width: 20%; }
+#StandardExpensesTable th:nth-child(2) { width: 15%; }
+#StandardExpensesTable th:nth-child(3) { width: 35%; }
+#StandardExpensesTable th:nth-child(4) { width: 30%; }
+
 .table {
     background-color: var(--nzno-white);
     border-radius: var(--nzno-radius);

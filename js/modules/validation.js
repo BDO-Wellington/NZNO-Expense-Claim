@@ -68,8 +68,22 @@ const VALIDATION_RULES = {
       maxLength: 'Event/reason must be less than 500 characters'
     }
   },
+  costCentre: {
+    required: true,
+    minLength: 1,
+    maxLength: 20,
+    messages: {
+      required: 'Cost Centre Code is required',
+      minLength: 'Cost Centre Code is required',
+      maxLength: 'Cost Centre Code must be less than 20 characters'
+    }
+  },
   travelStartDate: {
     required: true,
+    condition: () => {
+      const checkbox = document.getElementById('notTravelRelated');
+      return !checkbox || !checkbox.checked;
+    },
     custom: (value) => {
       const date = new Date(value);
       if (isNaN(date.getTime())) {
@@ -83,6 +97,10 @@ const VALIDATION_RULES = {
   },
   travelEndDate: {
     required: true,
+    condition: () => {
+      const checkbox = document.getElementById('notTravelRelated');
+      return !checkbox || !checkbox.checked;
+    },
     custom: (value) => {
       const date = new Date(value);
       if (isNaN(date.getTime())) {
@@ -114,12 +132,23 @@ const VALIDATION_RULES = {
   },
   bankAccountNumber: {
     required: true,
-    minLength: 1,
-    maxLength: 30,
+    custom: (value) => {
+      // NZ bank account format: BB-bbbb-AAAAAAA-SS(S) = 18 or 19 characters
+      const length = value.length;
+      if (length < 18) {
+        return 'Bank account number is incomplete. Expected format: XX-XXXX-XXXXXXX-XX(X)';
+      }
+      if (length > 19) {
+        return 'Bank account number is too long. Expected format: XX-XXXX-XXXXXXX-XX(X)';
+      }
+      // Validate format pattern
+      if (!/^\d{2}-\d{4}-\d{7}-\d{2,3}$/.test(value)) {
+        return 'Bank account number must be in format: XX-XXXX-XXXXXXX-XX(X)';
+      }
+      return null;
+    },
     messages: {
-      required: 'Bank account number is required',
-      minLength: 'Bank account number is required',
-      maxLength: 'Bank account number must be less than 30 characters'
+      required: 'Bank account number is required'
     }
   },
   // Conditional: Member only
@@ -143,20 +172,6 @@ const VALIDATION_RULES = {
       required: 'NZNO staff contact is required',
       minLength: 'NZNO staff contact must be at least 2 characters',
       maxLength: 'NZNO staff contact must be less than 100 characters'
-    }
-  },
-  // Conditional: Staff only
-  employeeId: {
-    required: true,
-    condition: () => getClaimantType() === 'staff',
-    minLength: 1,
-    maxLength: 20,
-    pattern: /^[a-zA-Z0-9\-]+$/,
-    messages: {
-      required: 'Employee ID is required',
-      minLength: 'Employee ID is required',
-      maxLength: 'Employee ID must be less than 20 characters',
-      pattern: 'Employee ID can only contain letters, numbers, and hyphens'
     }
   },
   // Conditional: Other only

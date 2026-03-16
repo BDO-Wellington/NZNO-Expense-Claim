@@ -229,7 +229,6 @@ describe('Expense Submission Integration', () => {
 
         const payload = getFetchBody();
         expect(payload.fullName).toBe(fullName);
-        expect(payload.employeeId).toBe(employeeId);
 
         const errors = stopErrorCapture();
         const submissionErrors = errors.filter(e =>
@@ -535,7 +534,6 @@ describe('Expense Submission Integration', () => {
 
       // Verify all mandatory fields
       expect(payload.fullName).toBe(nurse.fullName);
-      expect(payload.employeeId).toBe(nurse.employeeId);
       expect(payload.expenseDate).toBe(date);
 
       // Verify flight amount in line items

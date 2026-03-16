@@ -6,7 +6,7 @@
  */
 
 import { loadConfig, showConfigError } from './modules/config-loader.js';
-import { initializeUI, setupEventListeners, generateExpenseTable } from './modules/ui-handlers.js';
+import { initializeUI, setupEventListeners, generateExpenseTable, setupNotTravelRelatedToggle, setupMileageLimitCheck, setupBankAccountFormatting } from './modules/ui-handlers.js';
 import { handleFormSubmit } from './modules/form-handler.js';
 import { downloadPDF, validatePdfLibraries } from './modules/pdf-generator.js';
 import { logError } from './modules/utils.js';
@@ -20,6 +20,38 @@ import { EXPENSE_TYPES } from './modules/expense-types.js';
  */
 let appConfig = null;
 let pdfLibrariesAvailable = true;
+
+/**
+ * Updates mileage section visibility based on claimant type.
+ * Hides the $165/day limit references when Staff is selected.
+ * @param {string} claimantType - The current claimant type
+ * @returns {void}
+ */
+function updateMileageVisibility(claimantType) {
+  const isStaff = claimantType === 'staff';
+
+  // Hide mileage note in mileage section for staff
+  const mileageNote = document.getElementById('mileageNote');
+  if (mileageNote) {
+    if (isStaff) {
+      mileageNote.textContent = 'Use of private vehicle must be approved prior to travel.';
+    } else {
+      mileageNote.textContent = 'Use of private vehicle must be approved prior to travel. Mileage claims are limited to the rental equivalent of $165 per day for all vehicle types.';
+    }
+  }
+
+  // Hide mileage limit note in Important Information for staff
+  const limitNotes = document.querySelectorAll('.mileage-limit-note');
+  limitNotes.forEach(note => {
+    note.style.display = isStaff ? 'none' : '';
+  });
+
+  // Hide mileage warning for staff
+  const warningEl = document.getElementById('mileageLimitWarning');
+  if (warningEl && isStaff) {
+    warningEl.classList.add('d-none');
+  }
+}
 
 /**
  * Initializes the application.
@@ -64,7 +96,22 @@ async function initApp() {
     setupClaimantTypeToggle((newType) => {
       // Regenerate expense table when claimant type changes
       generateExpenseTable(EXPENSE_TYPES, newType);
+
+      // Toggle mileage limit references based on claimant type
+      updateMileageVisibility(newType);
     });
+
+    // Apply initial mileage visibility
+    updateMileageVisibility(claimantType);
+
+    // Setup not-travel-related toggle
+    setupNotTravelRelatedToggle();
+
+    // Setup mileage daily limit check (members only)
+    setupMileageLimitCheck();
+
+    // Setup bank account number auto-formatting
+    setupBankAccountFormatting();
 
     // Setup form validation
     console.log('[ExpenseClaim] Setting up form validation...');

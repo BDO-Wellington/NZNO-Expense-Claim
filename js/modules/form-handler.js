@@ -218,11 +218,11 @@ function buildLineItemsArray(expenseItems, vehicleData) {
     }
   });
 
-  // Add private vehicle if applicable
+  // Add mileage if applicable
   if (vehicleData.kms > 0 && vehicleData.amount > 0) {
-    const parts = ['Private Vehicle'];
+    const parts = ['Mileage'];
     if (vehicleData.vehicleType) {
-      parts[0] = `Private Vehicle (${vehicleData.vehicleType})`;
+      parts[0] = `Mileage (${vehicleData.vehicleType})`;
     }
     if (vehicleData.travelledFrom && vehicleData.travelledTo) {
       parts.push(`${vehicleData.travelledFrom} to ${vehicleData.travelledTo}`);
@@ -259,8 +259,10 @@ function collectFormData(form) {
     eventReason: form.eventReason?.value || '',
     travelStartDate: form.travelStartDate?.value || '',
     travelEndDate: form.travelEndDate?.value || '',
+    notTravelRelated: form.notTravelRelated?.checked || false,
     numberOfDays: form.numberOfDays?.value || '',
     costCentre: form.costCentre?.value || '',
+    activityCode: form.activityCode?.value || '',
     bankAccountName: form.bankAccountName?.value || '',
     bankAccountNumber: form.bankAccountNumber?.value || ''
   };
@@ -269,8 +271,9 @@ function collectFormData(form) {
   if (claimantType === 'member') {
     data.membershipNumber = form.membershipNumber?.value || '';
     data.nznoStaffContact = form.querySelector('#nznoStaffContactMember')?.value || '';
+    data.collegeSection = form.collegeSection?.value || '';
   } else if (claimantType === 'staff') {
-    data.employeeId = form.employeeId?.value || '';
+    // No additional staff-specific fields
   } else if (claimantType === 'other') {
     data.nznoStaffContact = form.querySelector('#nznoStaffContactOther')?.value || '';
   }

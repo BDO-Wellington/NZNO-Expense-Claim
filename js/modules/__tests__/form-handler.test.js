@@ -83,7 +83,7 @@ describe('buildLineItemsArray', () => {
       const result = buildLineItemsArray([], vehicleData);
 
       expect(result).toHaveLength(1);
-      expect(result[0].description).toContain('Private Vehicle');
+      expect(result[0].description).toContain('Mileage');
       expect(result[0].quantity).toBe(1);
       expect(result[0].amount).toBe(104);
       expect(result[0].accountCode).toBe('481');
@@ -134,7 +134,7 @@ describe('buildLineItemsArray', () => {
     expect(result).toHaveLength(3);
     expect(result[0].description).toBe('Flights');
     expect(result[1].description).toBe('Breakfast');
-    expect(result[2].description).toContain('Private Vehicle');
+    expect(result[2].description).toContain('Mileage');
     expect(result[2].description).toContain('Site visit');
   });
 
@@ -214,13 +214,16 @@ describe('collectFormData', () => {
       email: { value: 'john@example.com' },
       expenseDate: { value: '2025-12-15' },
       eventReason: { value: 'Conference' },
+      notTravelRelated: { checked: false },
       travelStartDate: { value: '2025-12-14T08:00' },
       travelEndDate: { value: '2025-12-16T18:00' },
       numberOfDays: { value: '3' },
       costCentre: { value: 'CC100' },
+      activityCode: { value: 'AC01' },
       bankAccountName: { value: 'John Smith' },
       bankAccountNumber: { value: '01-1234-5678901-00' },
       membershipNumber: { value: 'MEM001' },
+      collegeSection: { value: 'College A' },
       querySelector: (selector) => {
         if (selector === '#nznoStaffContactMember') return { value: 'Jane Doe' };
         return null;

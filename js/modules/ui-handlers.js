@@ -52,6 +52,37 @@ export function generateExpenseTable(expenseTypes, claimantType = 'member') {
 }
 
 /**
+ * Appends a "Clear" button next to a file input that clears the selected files.
+ * The button is only visible when files are selected.
+ * @param {HTMLElement} container - The parent element (td) to append the button to
+ * @param {HTMLInputElement} fileInput - The file input element
+ * @returns {void}
+ */
+function appendClearAttachmentButton(container, fileInput) {
+  const clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.className = 'btn btn-danger btn-sm mt-1 d-none';
+  clearBtn.textContent = 'Clear';
+  clearBtn.setAttribute('aria-label', 'Clear attachment');
+
+  clearBtn.addEventListener('click', () => {
+    fileInput.value = '';
+    clearBtn.classList.add('d-none');
+    renderAttachmentFilenames();
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files.length > 0) {
+      clearBtn.classList.remove('d-none');
+    } else {
+      clearBtn.classList.add('d-none');
+    }
+  });
+
+  container.appendChild(clearBtn);
+}
+
+/**
  * Renders a standard expense row (amount + notes + attachment).
  * @param {HTMLElement} tableBody - Table body element
  * @param {object} type - Expense type definition
@@ -106,6 +137,7 @@ function renderStandardRow(tableBody, type) {
   attachInput.multiple = true;
   attachInput.setAttribute('aria-label', `${type.name} attachment`);
   attachCell.appendChild(attachInput);
+  appendClearAttachmentButton(attachCell, attachInput);
 
   row.appendChild(descCell);
   row.appendChild(amountCell);
@@ -207,6 +239,7 @@ function renderAccommodationRow(tableBody, type) {
   attachInput.multiple = true;
   attachInput.setAttribute('aria-label', 'Accommodation attachment');
   attachCell.appendChild(attachInput);
+  appendClearAttachmentButton(attachCell, attachInput);
 
   row.appendChild(descCell);
   row.appendChild(amountCell);
@@ -290,6 +323,7 @@ function renderMealGroupRows(tableBody, type) {
     attachInput.multiple = true;
     attachInput.setAttribute('aria-label', `${subItem.name} attachment`);
     attachCell.appendChild(attachInput);
+    appendClearAttachmentButton(attachCell, attachInput);
 
     row.appendChild(descCell);
     row.appendChild(amountCell);
@@ -555,8 +589,8 @@ export function calculateTravelDays(startValue, endValue) {
 
   const diffMs = end - start;
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
-  // Round to nearest 0.5
-  return Math.round(diffDays * 2) / 2;
+  // Always round up to nearest whole number
+  return Math.ceil(diffDays);
 }
 
 /**
@@ -610,6 +644,123 @@ export function setupTravelDatesCalculation() {
 
   startInput.addEventListener('change', onDateChange);
   endInput.addEventListener('change', onDateChange);
+}
+
+// ============================================
+// Mileage Daily Limit Check (Members Only)
+// ============================================
+
+/** @type {number} Maximum mileage reimbursement per day for members */
+const MILEAGE_DAILY_LIMIT = 165;
+
+/**
+ * Checks the mileage amount against the daily limit based on number of travel days.
+ * Only applies to "member" claimant type. Shows a warning if the amount exceeds the limit.
+ * @returns {void}
+ */
+export function checkMileageDailyLimit() {
+  const warningEl = document.getElementById('mileageLimitWarning');
+  if (!warningEl) return;
+
+  // Only check for members
+  const claimantType = document.querySelector('input[name="claimantType"]:checked');
+  if (!claimantType || claimantType.value !== 'member') {
+    warningEl.classList.add('d-none');
+    return;
+  }
+
+  const vehicleAmount = parseFloat(document.getElementById('vehicleAmount')?.value) || 0;
+  const numberOfDays = parseFloat(document.getElementById('numberOfDays')?.value) || 0;
+
+  if (vehicleAmount <= 0 || numberOfDays <= 0) {
+    warningEl.classList.add('d-none');
+    return;
+  }
+
+  const maxAllowed = numberOfDays * MILEAGE_DAILY_LIMIT;
+
+  if (vehicleAmount > maxAllowed) {
+    warningEl.textContent = `Warning: Mileage claim of $${vehicleAmount.toFixed(2)} exceeds the daily limit of $${MILEAGE_DAILY_LIMIT}/day × ${numberOfDays} day(s) = $${maxAllowed.toFixed(2)}. The claim will be capped at $${maxAllowed.toFixed(2)} for review.`;
+    warningEl.classList.remove('d-none');
+  } else {
+    warningEl.classList.add('d-none');
+  }
+}
+
+/**
+ * Sets up mileage daily limit checking listeners.
+ * @returns {void}
+ */
+export function setupMileageLimitCheck() {
+  const kmsInput = document.getElementById('kms');
+  const vehicleTypeSelect = document.getElementById('vehicleType');
+  const daysInput = document.getElementById('numberOfDays');
+
+  const inputs = [kmsInput, vehicleTypeSelect, daysInput].filter(Boolean);
+  inputs.forEach(input => {
+    input.addEventListener('input', checkMileageDailyLimit);
+    input.addEventListener('change', checkMileageDailyLimit);
+  });
+
+  // Also re-check when claimant type changes
+  document.querySelectorAll('input[name="claimantType"]').forEach(radio => {
+    radio.addEventListener('change', checkMileageDailyLimit);
+  });
+}
+
+// ============================================
+// Not Travel-Related Toggle
+// ============================================
+
+/**
+ * Sets up the "not travel-related" checkbox to show/hide travel details.
+ * When checked, hides travel date fields and removes their required attributes.
+ * @returns {void}
+ */
+export function setupNotTravelRelatedToggle() {
+  const checkbox = document.getElementById('notTravelRelated');
+  const travelSection = document.getElementById('travelDetailsSection');
+  const startInput = document.getElementById('travelStartDate');
+  const endInput = document.getElementById('travelEndDate');
+
+  if (!checkbox || !travelSection) return;
+
+  checkbox.addEventListener('change', () => {
+    if (checkbox.checked) {
+      travelSection.classList.add('d-none');
+      if (startInput) {
+        startInput.removeAttribute('required');
+        startInput.removeAttribute('aria-required');
+        startInput.value = '';
+      }
+      if (endInput) {
+        endInput.removeAttribute('required');
+        endInput.removeAttribute('aria-required');
+        endInput.value = '';
+      }
+      const daysInput = document.getElementById('numberOfDays');
+      if (daysInput) daysInput.value = '';
+    } else {
+      travelSection.classList.remove('d-none');
+      if (startInput) {
+        startInput.setAttribute('required', '');
+        startInput.setAttribute('aria-required', 'true');
+      }
+      if (endInput) {
+        endInput.setAttribute('required', '');
+        endInput.setAttribute('aria-required', 'true');
+      }
+    }
+  });
+}
+
+/**
+ * Returns whether the "not travel-related" checkbox is checked.
+ * @returns {boolean}
+ */
+export function isNotTravelRelated() {
+  const checkbox = document.getElementById('notTravelRelated');
+  return checkbox ? checkbox.checked : false;
 }
 
 // ============================================
@@ -833,6 +984,67 @@ export function initializeUI(config, claimantType = 'member') {
   if (config && config.DEBUG_MODE && config.DEBUG_MODE.toUpperCase() === 'DEBUG') {
     hidePdfButton();
   }
+}
+
+// ============================================
+// Bank Account Number Auto-Formatting
+// ============================================
+
+/**
+ * Formats a bank account number string with hyphens in NZ format: BB-bbbb-AAAAAAA-SSS.
+ * Only allows numeric input. Auto-inserts hyphens at positions 2, 6, and 13.
+ * @param {string} raw - Raw input value
+ * @returns {string} Formatted bank account number
+ */
+export function formatBankAccountNumber(raw) {
+  // Strip all non-digit characters
+  const digits = raw.replace(/\D/g, '');
+
+  // Limit to 16 digits max (2+4+7+3)
+  const limited = digits.slice(0, 16);
+
+  // Build formatted string with hyphens
+  let formatted = '';
+  for (let i = 0; i < limited.length; i++) {
+    if (i === 2 || i === 6 || i === 13) {
+      formatted += '-';
+    }
+    formatted += limited[i];
+  }
+
+  return formatted;
+}
+
+/**
+ * Sets up bank account number auto-formatting with hyphens.
+ * Restricts input to numeric characters and auto-inserts hyphens.
+ * @returns {void}
+ */
+export function setupBankAccountFormatting() {
+  const input = document.getElementById('bankAccountNumber');
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    const cursorPos = input.selectionStart;
+    const oldValue = input.value;
+    const formatted = formatBankAccountNumber(oldValue);
+    input.value = formatted;
+
+    // Try to maintain cursor position intelligently
+    const diff = formatted.length - oldValue.length;
+    const newPos = Math.max(0, cursorPos + diff);
+    input.setSelectionRange(newPos, newPos);
+  });
+
+  // Prevent non-numeric key presses (except navigation keys)
+  input.addEventListener('keypress', (e) => {
+    // Allow control keys
+    if (e.ctrlKey || e.metaKey) return;
+    // Only allow digits
+    if (!/\d/.test(e.key)) {
+      e.preventDefault();
+    }
+  });
 }
 
 // ============================================
