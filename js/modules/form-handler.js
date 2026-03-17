@@ -274,8 +274,6 @@ function collectFormData(form) {
     data.collegeSection = form.collegeSection?.value || '';
   } else if (claimantType === 'staff') {
     // No additional staff-specific fields
-  } else if (claimantType === 'other') {
-    data.nznoStaffContact = form.querySelector('#nznoStaffContactOther')?.value || '';
   }
 
   return data;

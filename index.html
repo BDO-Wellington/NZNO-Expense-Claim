@@ -97,10 +97,6 @@ Best Practices:
                         <input type="radio" class="custom-control-input" id="claimantMember" name="claimantType" value="member" checked>
                         <label class="custom-control-label" for="claimantMember">Member</label>
                     </div>
-                    <div class="custom-control custom-radio">
-                        <input type="radio" class="custom-control-input" id="claimantOther" name="claimantType" value="other">
-                        <label class="custom-control-label" for="claimantOther">Other</label>
-                    </div>
                 </div>
             </section>
 
@@ -155,16 +151,8 @@ Best Practices:
             <div id="staffFields" class="d-none">
             </div>
 
-            <!-- Conditional fields: Other -->
+            <!-- Conditional fields: Other (removed - only Staff/Member supported) -->
             <div id="otherFields" class="d-none">
-                <div class="details-row">
-                    <div class="details-col">
-                        <section class="form-group">
-                            <label for="nznoStaffContactOther">NZNO Staff Contact <span class="required-indicator">*</span></label>
-                            <input type="text" class="form-control" id="nznoStaffContactOther" name="nznoStaffContact" aria-required="true">
-                        </section>
-                    </div>
-                </div>
             </div>
 
             <!-- Travel & Event Details -->
@@ -282,7 +270,7 @@ Best Practices:
                         <input type="text" class="form-control" id="travelledTo" name="travelledTo" aria-label="Destination location">
                     </div>
                 </div>
-                <small class="form-text text-muted" id="mileageNote">Use of private vehicle must be approved prior to travel. Mileage claims are limited to the rental equivalent of $165 per day for all vehicle types.</small>
+                <small class="form-text text-muted" id="mileageNote">Use of private vehicle must be approved by NZNO prior to travel. Mileage claims are limited to the rental equivalent of $165 per day for all vehicle types.</small>
                 <div id="mileageLimitWarning" class="alert alert-warning mt-2 d-none" role="alert"></div>
             </section>
 
@@ -340,20 +328,19 @@ Best Practices:
             <section class="form-section policy-notes">
                 <h4>Important Information</h4>
                 <ul>
-                    <li>To help avoid members paying out of pocket, NZNO encourages the use of suppliers we already have invoice arrangements with.</li>
                     <li>NZNO does not reimburse infringement fees such as traffic or parking fines incurred while on NZNO business.</li>
                     <li>All purchases must be supported by a sales receipt showing the details of items purchased and supplier GST number (if applicable).</li>
                     <li>Claims submitted are required to be approved before they are paid. NZNO generally pays claims within one week of approval of the claim by an approver with NZNO financial authority.</li>
                     <li><strong>Meals:</strong>
                         <ul>
                             <li>The maximum daily rate for meals is determined by the start and end time of travel, and whether food is provided (in the case of a conference or meeting). The maximum daily claim for meals is $100 for a full day away from home.</li>
-                            <li>If travelling away for only one day, a claim can be made for breakfast if departure from home base is before 7AM and dinner only if you are unable to return to home base before 7.30PM. Breakfast and dinner may be claimed when away from home base overnight.</li>
+                            <li id="mealsTravelNote">If travelling away for only one day, a claim can be made for breakfast if departure from home base is before 7AM and dinner only if you are unable to return to home base before 7.30PM. Breakfast and dinner may be claimed when away from home base overnight.</li>
                             <li>NZNO does not reimburse the cost of alcohol.</li>
                         </ul>
                     </li>
                     <li id="mileagePolicyNote"><strong>Mileage:</strong>
                         <ul>
-                            <li>Use of private vehicle must be approved prior to travel.</li>
+                            <li id="mileageApprovalNote">Use of private vehicle must be approved by NZNO prior to travel.</li>
                             <li class="mileage-limit-note">Mileage claims are limited to the rental equivalent of $165 per day for all vehicle types.</li>
                         </ul>
                     </li>

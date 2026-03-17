@@ -25,7 +25,7 @@ export const EXPENSE_TYPES = [
       { name: "Lunch", accountCode: "484", maxAmount: 20 },
       { name: "Dinner", accountCode: "484", maxAmount: 50 }
     ],
-    maxNote: "(Maximums GST inclusive: Breakfast $30, Lunch $20, Dinner $50. Alcoholic beverages are not reimbursable)"
+    maxNote: "(Maximums GST-inclusive: Breakfast $30, Lunch $20, Dinner $50. Meal limits can be flexed across a full travel day. Alcoholic beverages are not reimbursable)"
   }
 ];
 

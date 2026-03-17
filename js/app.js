@@ -36,7 +36,7 @@ function updateMileageVisibility(claimantType) {
     if (isStaff) {
       mileageNote.textContent = 'Use of private vehicle must be approved prior to travel.';
     } else {
-      mileageNote.textContent = 'Use of private vehicle must be approved prior to travel. Mileage claims are limited to the rental equivalent of $165 per day for all vehicle types.';
+      mileageNote.textContent = 'Use of private vehicle must be approved by NZNO prior to travel. Mileage claims are limited to the rental equivalent of $165 per day for all vehicle types.';
     }
   }
 
@@ -50,6 +50,26 @@ function updateMileageVisibility(claimantType) {
   const warningEl = document.getElementById('mileageLimitWarning');
   if (warningEl && isStaff) {
     warningEl.classList.add('d-none');
+  }
+
+  // Update meals travel note - Members get simplified wording
+  const mealsTravelNote = document.getElementById('mealsTravelNote');
+  if (mealsTravelNote) {
+    if (isStaff) {
+      mealsTravelNote.textContent = 'If travelling away for only one day, a claim can be made for breakfast if departure from home base is before 7AM and dinner only if you are unable to return to home base before 7.30PM. Breakfast and dinner may be claimed when away from home base overnight.';
+    } else {
+      mealsTravelNote.textContent = 'If travelling away for only one day, a claim can be made for breakfast if departure from home base is very early and dinner only if you are unable to return to home base until late. Breakfast and dinner may be claimed when away from home base overnight.';
+    }
+  }
+
+  // Update mileage approval note - Members need "by NZNO"
+  const mileageApprovalNote = document.getElementById('mileageApprovalNote');
+  if (mileageApprovalNote) {
+    if (isStaff) {
+      mileageApprovalNote.textContent = 'Use of private vehicle must be approved prior to travel.';
+    } else {
+      mileageApprovalNote.textContent = 'Use of private vehicle must be approved by NZNO prior to travel.';
+    }
   }
 }
 

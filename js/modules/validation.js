@@ -173,18 +173,6 @@ const VALIDATION_RULES = {
       minLength: 'NZNO staff contact must be at least 2 characters',
       maxLength: 'NZNO staff contact must be less than 100 characters'
     }
-  },
-  // Conditional: Other only
-  nznoStaffContactOther: {
-    required: true,
-    condition: () => getClaimantType() === 'other',
-    minLength: 2,
-    maxLength: 100,
-    messages: {
-      required: 'NZNO staff contact is required',
-      minLength: 'NZNO staff contact must be at least 2 characters',
-      maxLength: 'NZNO staff contact must be less than 100 characters'
-    }
   }
 };
 

@@ -1,6 +1,6 @@
 /**
  * Claimant Type Module
- * Purpose: Handle claimant type toggle (Staff/Member/Other) and conditional field visibility
+ * Purpose: Handle claimant type toggle (Staff/Member) and conditional field visibility
  * Date: March 2026
  */
 
@@ -8,7 +8,7 @@
  * Valid claimant types.
  * @type {Array<string>}
  */
-export const CLAIMANT_TYPES = ['member', 'staff', 'other'];
+export const CLAIMANT_TYPES = ['member', 'staff'];
 
 /**
  * Default claimant type.
@@ -18,7 +18,7 @@ export const DEFAULT_CLAIMANT_TYPE = 'member';
 
 /**
  * Gets the currently selected claimant type from the radio buttons.
- * @returns {string} The selected claimant type ('member', 'staff', or 'other')
+ * @returns {string} The selected claimant type ('member' or 'staff')
  */
 export function getClaimantType() {
   const checked = document.querySelector('input[name="claimantType"]:checked');
@@ -48,9 +48,6 @@ export function applyClaimantTypeVisibility(type) {
       break;
     case 'staff':
       if (staffFields) staffFields.classList.remove('d-none');
-      break;
-    case 'other':
-      if (otherFields) otherFields.classList.remove('d-none');
       break;
   }
 }
